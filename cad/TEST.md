@@ -52,7 +52,7 @@ Andrea ha fornito 3 file di un progetto reale, *"Vivienda Moya"* (Spagna, normat
 ## Controlli ancora necessari
 
 - [x] **Planimetria reale** (punto 21): `REF.OPCION 2.dxf`, vedi sopra.
-- [ ] **Test 8 in AutoCAD**, aprendo `prove/vivienda-moya-opcion2/REF.OPCION 2 - quotato.dxf` e controllando:
+- [ ] **Test 8 in AutoCAD**, aprendo `prove/vivienda-moya-opcion2/REF.OPCION 2 - quotato.dxf` (lo stesso file compresso, più facile da scaricare da GitHub: `opcion2_quotato.zip`) e controllando:
   - si apre senza messaggi di errore né richieste di recupero;
   - i layer `DOMUS_QUOTE`, `DOMUS_NOTE`, `DOMUS_CARTIGLIO` esistono e si possono accendere e spegnere;
   - le quote si selezionano come quote (non come linee esplose) e la misura coincide con il comando DIST;
