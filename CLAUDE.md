@@ -64,6 +64,10 @@ Indicazioni sue, dal documento master:
   - manca l'xref `00 REF_VIVIENDA MOYA`;
   - il file principale ha molte tavole affiancate: serve la scelta della zona;
   - avanzamento in `cad/ROADMAP.md`.
+- **Area "Planimetrie" nella webapp (30/10/2026).** Andrea vuole vedere e ritoccare tutte le planimetrie esecutive dal sito.
+  - Ha scelto **solo ritocchi** agli elaborati: quote, testi, cartiglio. Non un CAD completo.
+  - Idea: il motore gira nel browser con Pyodide.
+  - Prova di fattibilità in `cad/web/prova_browser.html`, da far provare ad Andrea sul Mac. Piano in `cad/ROADMAP.md`.
 - Flusso DWG scelto: AutoCAD *Salva con nome → DXF 2018*, poi elaborazione DOMUS, poi controllo in AutoCAD e salvataggio in DWG. CADCraft (MIT/Apache) è stato analizzato ma oggi è immaturo nel salvataggio: va rivalutato su file reali.
 - Decisioni di Andrea (30/10/2026):
   - **niente database dell'hosting**: dati su file (SQLite/JSON), anche se la specifica direbbe il contrario;

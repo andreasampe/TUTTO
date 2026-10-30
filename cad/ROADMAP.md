@@ -10,7 +10,7 @@ File di avanzamento del progetto (punto 17.6): va aggiornato alla fine di ogni f
 | 3 — Modello dell'edificio | locali, pareti, porte, finestre, superfici, correzioni manuali | da iniziare |
 | 4 — Elaborati architettonici | stato di fatto/progetto, demolizioni e costruzioni, layer e cartigli configurabili | da iniziare |
 | 5 — Impianti | elettrico, idrico-sanitario, scarichi | da iniziare: **solo dopo** la Fase 1 su file reali |
-| 6 — Integrazione web | collegare il motore a DOMUS (sito) | DOMUS web esiste già (gestione dello studio, cartella `../domus`); il collegamento è da fare. **Richiesta di Andrea:** quando uno studio si registra carica il suo file di riferimento; DOMUS ne ricava il profilo (`domus_cad profilo`) e lo usa per tutti i suoi elaborati, con una pagina per controllare e correggere i ruoli dei layer |
+| 6 — Integrazione web | collegare il motore a DOMUS (sito); **area "Planimetrie"** per vedere e ritoccare tutte le planimetrie esecutive | DOMUS web esiste già (gestione dello studio, cartella `../domus`); il collegamento è da fare. **Richiesta di Andrea:** quando uno studio si registra carica il suo file di riferimento; DOMUS ne ricava il profilo (`domus_cad profilo`) e lo usa per tutti i suoi elaborati, con una pagina per controllare e correggere i ruoli dei layer |
 | 7 — Evoluzione | computi, quantità, AI locale | futuro |
 
 ## Prossime attività (in ordine)
@@ -42,3 +42,29 @@ File di avanzamento del progetto (punto 17.6): va aggiornato alla fine di ogni f
 
 - ~~Database~~: deciso il 30/10/2026, **niente database dell'hosting**, dati su file (SQLite/JSON).
 - Hosting: probabilmente Aruba condiviso (Andrea non conosce i dettagli). Ipotesi di lavoro: il sito gestisce file e progetti, l'elaborazione CAD gira sul Mac. Da verificare dal pannello Aruba quando servirà la Fase 6.
+
+## Area "Planimetrie" nella webapp (richiesta di Andrea, 30/10/2026)
+
+**Scelta di Andrea:** nell'app servono **ritocchi sugli elaborati DOMUS**, cioè quote, testi e cartiglio. Non serve disegnare muri o arredi, quindi niente CAD completo per ora. Deve valere per **tutte le planimetrie esecutive**:
+- piante quotate;
+- stato di fatto e di progetto;
+- demolizioni e costruzioni;
+- impianti.
+
+Serve un'area dedicata del sito da cui modificarle tutte.
+
+Architettura proposta:
+- **visualizzatore** nel browser con modifiche mirate:
+  - spostare o togliere una quota, spostarne il testo;
+  - correggere i campi del cartiglio;
+  - rielaborare;
+- le modifiche le applica il **motore DOMUS (ezdxf)**, che non tocca il resto del disegno;
+- il motore dovrebbe girare **dentro il browser con Pyodide** (Python in WebAssembly, MPL-2.0). Così funziona uguale in Local e sull'hosting Aruba, senza Python sul server e senza il Mac acceso.
+
+**Passo 1, prova di fattibilità:** `web/prova_browser.html`, generata da `web/genera_prova.py`.
+- Verificato qui: Pyodide 0.27.7 parte nel browser e contiene tutte le librerie necessarie (numpy 2.0.2, Pillow 10.2.0, pyparsing, fonttools, typing-extensions; ezdxf da PyPI).
+- Non verificabile qui: l'elaborazione completa, perché il CDN di Pyodide è bloccato in questo ambiente cloud.
+- **Andrea:** aprire la pagina sul Mac (Chrome) e far elaborare `REF.OPCION 2.dxf`.
+
+CADCraft (CAD completo nel browser) resta da rivalutare se un giorno servirà modificare il disegno vero. Oggi perde dati al salvataggio (vedi ANALISI_TECNICA.md).
+
