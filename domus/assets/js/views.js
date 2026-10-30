@@ -31,7 +31,7 @@
         h('div', { class: 'item-meta' },
           showProject && t.project_id ? h('a', { href: `#/progetti/${t.project_id}` }, `${t.project_code} · ${t.project_title}`) : (showProject ? 'Studio' : null),
           t.notes ? ` — ${t.notes}` : null)),
-      dueLabel(t.due_date),
+      Number(t.done) ? (t.due_date ? h('span', { class: 'date' }, D.date(t.due_date)) : null) : dueLabel(t.due_date),
       h('button', { class: 'btn ghost small x', type: 'button', title: 'Elimina', 'aria-label': 'Elimina scadenza', onclick: async (e) => {
         if (!D.confirm(`Eliminare la scadenza "${t.title}"?`)) return;
         if (await D.run(e.currentTarget, () => D.del(`tasks/${t.id}`)) !== undefined) { await D.refreshOverdue(); onChange ? onChange() : D.render(); }
@@ -60,8 +60,28 @@
   const fileUrl = (id) => `api.php?r=files/${id}&inline=1`;
   const plusBtn = (label, onclick, cls = 'btn primary') => h('button', { class: cls, onclick }, D.icon('plus', 15), label);
 
+  async function loadDemo(btn) {
+    if (!D.confirm('Caricare uno studio dimostrativo con 7 progetti, clienti, foto, documenti, pratiche, rate e ore?')) return;
+    const out = await D.run(btn, () => D.post('demo'), 'Studio dimostrativo pronto');
+    if (out) { await D.refreshOverdue(); location.hash = '#/'; D.render(); }
+  }
+
   D.route('/', async (page) => {
     const d = await D.get('dashboard');
+    const totalProjects = Object.values(d.counts).reduce((a, b) => a + (b || 0), 0);
+    if (!totalProjects) {
+      page.append(h('section', { class: 'hero' },
+        h('img', { class: 'hero-img', src: 'assets/img/home.jpg', alt: '' }),
+        h('div', { class: 'hero-body' },
+          h('div', { class: 'eyebrow' }, 'Benvenuto in DOMUS'),
+          h('h2', { class: 'display' }, 'Dall\u2019idea', h('br'), 'al progetto.'),
+          h('p', { class: 'lead' }, 'Inizia creando il primo progetto, oppure esplora DOMUS con uno studio dimostrativo completo di foto, documenti e pratiche.'),
+          h('div', { class: 'hero-actions' },
+            plusBtn('Nuovo progetto', () => projectModal()),
+            D.isAdmin() ? h('button', { class: 'cta', onclick: (e) => loadDemo(e.currentTarget) }, h('span', {}, 'Carica lo studio dimostrativo'), h('span', { class: 'ring' }, D.icon('sparkle', 16))) : null)),
+        D.motto('hero-side')));
+      return { title: 'Panoramica', nav: 'home', hideTitle: true };
+    }
     const f = d.finance;
     const stat = (n, label, href, hint) => h('a', { class: 'stat', href: `#${href}` }, h('div', { class: 'n' }, n), h('div', { class: 'l' }, label), hint ? h('div', { class: 'item-meta' }, hint) : null);
     const deadlines = [...d.overdue, ...d.upcoming];
@@ -800,7 +820,8 @@
     h('div', { class: 'form-actions' }, h('button', { class: 'btn primary', type: 'submit' }, 'Aggiorna profilo')));
 
     if (!admin) {
-      page.append(h('div', { class: 'narrow' }, card('Profilo', null, h('p', { class: 'item-meta', style: 'margin:-6px 0 14px' }, `${D.user.email} · ${D.ROLE[D.user.role]}`), profile)));
+      page.append(h('div', { class: 'narrow' }, card('Profilo', null, h('p', { class: 'item-meta', style: 'margin:-6px 0 14px' }, `${D.user.email} · ${D.ROLE[D.user.role]}`), profile),
+        card('Calendario sul Mac e sull\u2019iPhone', null, icalBox())));
       return { title: 'Impostazioni', nav: 'impostazioni' };
     }
 
@@ -814,6 +835,7 @@
     h('div', { class: 'form-actions' }, h('button', { class: 'btn primary', type: 'submit' }, 'Salva')));
 
     const users = await D.get('users');
+    const demoAvailable = (await D.get('demo')).available;
     const team = h('ul', { class: 'list' }, users.map((u) => h('li', { class: `item${Number(u.active) ? '' : ' inactive'}` },
       h('div', { class: `avatar${Number(u.active) ? ' online' : ''}`, 'aria-hidden': 'true' }, D.initials(u.name)),
       h('div', { class: 'item-main' },
@@ -829,11 +851,36 @@
           team)),
       h('div', {},
         card('Profilo', null, h('p', { class: 'item-meta', style: 'margin:-6px 0 14px' }, D.user.email), profile),
+        card('Calendario sul Mac e sull\u2019iPhone', null,
+          h('p', { class: 'small', style: 'margin:0 0 12px;color:var(--ink-2)' }, 'Abbonati a questo indirizzo dall\u2019app Calendario (Archivio → Nuovo abbonamento al calendario): scadenze, fasi, consegne, pratiche e rate si aggiornano da sole.'),
+          icalBox()),
+        demoAvailable ? card('Studio dimostrativo', null,
+          h('p', { class: 'small', style: 'margin:0 0 12px;color:var(--ink-2)' }, 'L\u2019archivio è vuoto: puoi caricare uno studio di esempio con progetti, foto, documenti PDF, pratiche, rate e ore per provare tutte le funzioni.'),
+          h('button', { class: 'btn primary', onclick: (e) => loadDemo(e.currentTarget) }, D.icon('sparkle', 15), 'Carica lo studio dimostrativo')) : null,
         card('Backup', null,
           h('p', { class: 'small', style: 'margin:0 0 12px;color:var(--ink-2)' }, 'Scarica tutti i dati in un file JSON leggibile. I documenti caricati stanno nella cartella domus-data/files: per un backup completo copia l\'intera cartella domus-data.'),
           h('a', { class: 'btn', href: 'api.php?r=export', download: '' }, 'Scarica backup JSON')))));
     return { title: 'Impostazioni', nav: 'impostazioni' };
   });
+
+  // Indirizzo iCal personale con copia e rigenerazione.
+  function icalBox() {
+    const box = h('div', { class: 'ical' }, h('span', { class: 'muted small' }, 'Caricamento…'));
+    const draw = (token) => {
+      const url = new URL(`api.php?r=calendar.ics&token=${token}`, location.href).href;
+      const input = h('input', { type: 'text', value: url, readonly: true, 'aria-label': 'Indirizzo del calendario', onclick: (e) => e.target.select() });
+      box.replaceChildren(input, h('div', { class: 'form-actions', style: 'justify-content:flex-start;margin-top:10px' },
+        h('button', { class: 'btn small', onclick: async () => { try { await navigator.clipboard.writeText(url); D.toast('Indirizzo copiato'); } catch { input.select(); } } }, D.icon('link', 14), 'Copia'),
+        h('a', { class: 'btn small', href: url.replace(/^https?:/, 'webcal:') }, D.icon('calendar', 14), 'Apri in Calendario'),
+        h('button', { class: 'btn ghost small', onclick: async (e) => {
+          if (!D.confirm('Rigenerare l\u2019indirizzo? Quello vecchio smetterà di funzionare.')) return;
+          const out = await D.run(e.currentTarget, () => D.post('ical'), 'Nuovo indirizzo creato');
+          if (out) draw(out.token);
+        } }, 'Rigenera')));
+    };
+    D.get('ical').then((r) => draw(r.token)).catch((err) => box.replaceChildren(h('span', { class: 'muted small' }, err.message)));
+    return box;
+  }
 
   function userModal(existing) {
     const u = existing || {};

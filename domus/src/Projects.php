@@ -13,7 +13,8 @@ final class Projects
 
     // Copertina: quella scelta (se il file esiste ancora), altrimenti la prima immagine, preferendo le foto.
     private const COVER = "COALESCE(
-        (SELECT f.id FROM files f WHERE f.id = p.cover_file_id AND f.project_id = p.id),
+        (SELECT f.id FROM files f WHERE f.id = p.cover_file_id AND f.project_id = p.id
+         AND f.mime IN ('image/jpeg','image/png','image/webp','image/gif')),
         (SELECT f.id FROM files f WHERE f.project_id = p.id AND f.mime IN ('image/jpeg','image/png','image/webp','image/gif')
          ORDER BY f.category = 'foto' DESC, f.id LIMIT 1)
     )";
@@ -136,6 +137,15 @@ final class Projects
         if (!Db::value('SELECT 1 FROM projects WHERE id = ?', [$id])) {
             throw new HttpError(404, 'Progetto non trovato');
         }
+    }
+
+    public static function setStatus(int $id, array $in): void
+    {
+        self::exists($id);
+        Db::update('projects', $id, [
+            'status' => Validate::oneOf($in['status'] ?? null, self::STATUSES, 'status'),
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
     }
 
     public static function setCover(int $id, array $in): void

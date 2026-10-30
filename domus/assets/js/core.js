@@ -266,9 +266,12 @@ D.layout = function (meta, page) {
       D.h('nav', { class: 'nav', onclick: () => document.body.classList.remove('nav-open') },
         navLink('/', 'Panoramica', 'home', 'home'),
         navLink('/progetti', 'Progetti', 'progetti', 'projects'),
+        navLink('/bacheca', 'Bacheca', 'bacheca', 'board'),
         navLink('/clienti', 'Clienti', 'clienti', 'clients'),
         navLink('/scadenze', 'Scadenze', 'scadenze', 'tasks', D.overdue),
         navLink('/calendario', 'Calendario', 'calendario', 'calendar'),
+        navLink('/galleria', 'Galleria', 'galleria', 'image'),
+        navLink('/studio', 'Studio', 'studio', 'chart'),
         navLink('/impostazioni', 'Impostazioni', 'impostazioni', 'settings')),
       D.h('button', { class: 'search-trigger', type: 'button', onclick: () => D.palette() },
         D.icon('search', 15), D.h('span', {}, 'Cerca'), D.h('kbd', {}, /Mac|iP/.test(navigator.platform) ? '⌘K' : 'Ctrl K')),
@@ -350,7 +353,7 @@ D.authScreen = function (setup) {
           ? 'Primo avvio: crea l’account con cui entrerai in DOMUS. Progetti, clienti, pratiche e documenti dello studio in un unico ambiente.'
           : 'Progetti, clienti, pratiche e documenti dello studio in un unico ambiente.'),
         form),
-      D.h('div', { class: 'auth-foot' }, 'Design · Organize · Model · Unify · Simplify')),
+      D.h('div', { class: 'auth-foot' }, 'DOMUS · Intelligent Building Design')),
     D.h('div', { class: 'auth-visual', 'aria-hidden': 'true' },
       D.h('img', { src: 'assets/img/login.jpg', alt: '' }),
       D.motto('acronym'))));

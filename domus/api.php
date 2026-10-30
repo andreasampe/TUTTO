@@ -91,6 +91,7 @@ try {
         $resource === 'projects' && $id === null && $method === 'GET' => Projects::list((string) ($_GET['status'] ?? ''), $q),
         $resource === 'projects' && $id === null && $method === 'POST' => ['id' => Projects::create($in, $user)],
         $resource === 'projects' && $id !== null && $sub === 'phases' && $method === 'POST' => ['id' => Projects::addPhase($id, $in)],
+        $resource === 'projects' && $id !== null && $sub === 'status' && $method === 'PUT' => $ok(fn () => Projects::setStatus($id, $in)),
         $resource === 'projects' && $id !== null && $sub === 'cover' && $method === 'PUT' => $ok(fn () => Projects::setCover($id, $in)),
         $resource === 'projects' && $id !== null && $sub === 'files' && $method === 'POST' => ['ids' => Files::upload($user, $id, $_FILES, (string) ($_POST['category'] ?? 'documento'))],
         $resource === 'projects' && $id !== null && $sub === null && $method === 'GET' => Projects::get($id, $user),

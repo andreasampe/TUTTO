@@ -41,7 +41,7 @@ check('dati dimostrativi caricati', $s === 200 && $r['projects'] === 7 && $r['cl
 check('non si caricano due volte', $s === 409);
 
 [, $list] = call('GET', 'projects');
-check('7 progetti con copertina', count($list) === 7 && count(array_filter($list, fn ($p) => $p['cover_id'])) === 6, array_column($list, 'cover_id'));
+check('copertine solo per i progetti con foto', count($list) === 7 && count(array_filter($list, fn ($p) => $p['cover_id'])) === 5, array_column($list, 'cover_id'));
 [, $p] = call('GET', "projects/{$list[count($list) - 1]['id']}");
 $pdf = array_values(array_filter($p['files'], fn ($f) => $f['mime'] === 'application/pdf'))[0] ?? null;
 check('PDF generati nel progetto', $pdf !== null, array_column($p['files'], 'name'));
@@ -49,6 +49,12 @@ $ch = curl_init("$base/api.php?r=files/{$pdf['id']}");
 curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_COOKIEFILE => $jar]);
 $body = (string) curl_exec($ch);
 check('il PDF è valido', str_starts_with($body, '%PDF-1.4') && str_contains($body, '%%EOF') && str_contains($body, 'startxref'));
+
+[$s] = call('PUT', "projects/{$list[0]['id']}/status", ['status' => 'concluso']);
+[, $p0] = call('GET', "projects/{$list[0]['id']}");
+check('cambio di stato dalla bacheca', $s === 200 && $p0['status'] === 'concluso' && $p0['title'] === $list[0]['title']);
+[$s] = call('PUT', "projects/{$list[0]['id']}/status", ['status' => 'boh']);
+check('stato non valido rifiutato', $s === 422);
 
 [$s, $rep] = call('GET', 'reports');
 check('statistiche: 12 mesi e incassi', count($rep['months']) === 12 && array_sum($rep['paid']) > 0 && count($rep['hours_projects']) > 0, array_keys($rep));

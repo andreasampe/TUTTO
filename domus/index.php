@@ -23,6 +23,7 @@ $name = htmlspecialchars((string) \Domus\App::config('app_name'), ENT_QUOTES);
   <link rel="preload" href="assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <title><?= $name ?></title>
   <link rel="icon" href="<?= $v('assets/icon.svg') ?>" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="stylesheet" href="<?= $v('assets/css/domus.css') ?>">
 </head>
 <body>
@@ -30,5 +31,6 @@ $name = htmlspecialchars((string) \Domus\App::config('app_name'), ENT_QUOTES);
   <script src="<?= $v('assets/js/core.js') ?>"></script>
   <script src="<?= $v('assets/js/icons.js') ?>"></script>
   <script src="<?= $v('assets/js/views.js') ?>"></script>
+  <script src="<?= $v('assets/js/screens.js') ?>"></script>
 </body>
 </html>

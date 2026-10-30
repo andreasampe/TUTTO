@@ -100,7 +100,7 @@ final class Demo
             }
 
             // ---------- copertine scelte ----------
-            Db::run('UPDATE projects SET cover_file_id = (SELECT id FROM files f WHERE f.project_id = projects.id ORDER BY f.id LIMIT 1)');
+            Db::run("UPDATE projects SET cover_file_id = (SELECT id FROM files f WHERE f.project_id = projects.id AND f.mime = 'image/jpeg' ORDER BY f.id LIMIT 1)");
 
             // ---------- scadenze ----------
             foreach ([
