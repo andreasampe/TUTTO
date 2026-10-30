@@ -35,7 +35,7 @@
       h('button', { class: 'btn ghost small x', type: 'button', title: 'Elimina', 'aria-label': 'Elimina scadenza', onclick: async (e) => {
         if (!D.confirm(`Eliminare la scadenza "${t.title}"?`)) return;
         if (await D.run(e.currentTarget, () => D.del(`tasks/${t.id}`)) !== undefined) { await D.refreshOverdue(); onChange ? onChange() : D.render(); }
-      } }, '✕'));
+      } }, D.icon('x', 14)));
   }
 
   function taskForm(projectId, onDone) {
@@ -57,30 +57,44 @@
     return hour < 13 ? 'Buongiorno' : hour < 18 ? 'Buon pomeriggio' : 'Buonasera';
   }
 
+  const fileUrl = (id) => `api.php?r=files/${id}&inline=1`;
+  const plusBtn = (label, onclick, cls = 'btn primary') => h('button', { class: cls, onclick }, D.icon('plus', 15), label);
+
   D.route('/', async (page) => {
     const d = await D.get('dashboard');
-    const stat = (n, label, href, hint) => h('a', { class: 'stat', href: `#${href}` }, h('div', { class: 'n' }, n), h('div', { class: 'l' }, label), hint ? h('div', { class: 'item-meta' }, hint) : null);
-
-    const deadlines = [...d.overdue, ...d.upcoming];
     const f = d.finance;
+    const stat = (n, label, href, hint) => h('a', { class: 'stat', href: `#${href}` }, h('div', { class: 'n' }, n), h('div', { class: 'l' }, label), hint ? h('div', { class: 'item-meta' }, hint) : null);
+    const deadlines = [...d.overdue, ...d.upcoming];
+    const summary = [
+      `${d.counts.in_corso || 0} progett${d.counts.in_corso === 1 ? 'o' : 'i'} in corso`,
+      d.overdue.length ? `${d.overdue.length} scadenz${d.overdue.length === 1 ? 'a superata' : 'e superate'}` : null,
+      d.upcoming.length ? `${d.upcoming.length} in arrivo` : null,
+    ].filter(Boolean).join(' · ');
+
     page.append(
+      h('section', { class: 'hero' },
+        h('img', { class: 'hero-img', src: 'assets/img/home.jpg', alt: '' }),
+        h('div', { class: 'hero-body' },
+          h('div', { class: 'eyebrow' }, D.studioName || 'DOMUS'),
+          h('h2', { class: 'display' }, `${greeting()},`, h('br'), `${D.user.name.split(' ')[0]}.`),
+          h('p', { class: 'lead' }, summary),
+          h('div', { class: 'hero-actions' },
+            plusBtn('Nuovo progetto', () => projectModal()),
+            h('a', { class: 'cta', href: '#/calendario' }, h('span', {}, 'Apri il calendario'), h('span', { class: 'ring' }, D.icon('arrow', 16))))),
+        D.motto('hero-side')),
       h('div', { class: 'stats' },
-        stat(d.counts.in_corso || 0, 'Progetti in corso', '/progetti', d.counts.preventivo ? `${d.counts.preventivo} preventivi aperti` : null),
-        stat(d.overdue.length, 'Scadenze superate', '/scadenze', d.upcoming.length ? `${d.upcoming.length} nei prossimi 14 giorni` : null),
+        stat(d.counts.in_corso || 0, 'In corso', '/progetti', d.counts.preventivo ? `${d.counts.preventivo} preventivi aperti` : null),
+        stat(d.overdue.length, 'Scadenze superate', '/scadenze', d.upcoming.length ? `${d.upcoming.length} nei prossimi 14 giorni` : 'nessuna in arrivo'),
         f ? stat(D.money(f.to_collect), 'Da incassare', '/progetti', f.to_invoice ? `${D.money(f.to_invoice)} da fatturare` : null)
           : stat(d.permits.length, 'Pratiche in attesa', '/progetti'),
         f ? stat(D.money(f.paid_year), `Incassato ${new Date().getFullYear()}`, '/progetti')
           : stat(D.hours(d.hours_week), 'Le tue ore', '/progetti', 'questa settimana')),
+      d.active.length ? h('div', { class: 'toolbar', style: 'margin:28px 0 14px' },
+        h('h3', { class: 'section-title', style: 'margin:0;flex:1' }, 'Progetti in corso'),
+        h('a', { class: 'cta', href: '#/progetti' }, h('span', {}, 'Tutti i progetti'), h('span', { class: 'ring' }, D.icon('arrow', 16)))) : null,
+      d.active.length ? h('div', { class: 'cards', style: 'margin-bottom:18px' }, d.active.slice(0, 3).map(projectCard)) : null,
       h('div', { class: 'grid-2' },
         h('div', {},
-          card('Progetti in corso', h('a', { class: 'btn ghost small', href: '#/progetti' }, 'Tutti →'),
-            d.active.length
-              ? h('ul', { class: 'list' }, d.active.map((p) => h('li', {}, h('a', { class: 'item', href: `#/progetti/${p.id}` },
-                h('div', { class: 'item-main' },
-                  h('div', { class: 'item-title' }, p.title),
-                  h('div', { class: 'item-meta' }, h('span', { class: 'code' }, p.code), p.client_name ? ` · ${p.client_name}` : '', p.current_phase ? ` · ${p.current_phase}` : '')),
-                progress(Number(p.phases_done), Number(p.phases_total))))))
-              : empty('Nessun progetto in corso.', h('button', { class: 'btn primary', onclick: () => projectModal() }, 'Nuovo progetto'))),
           d.permits.length ? card('Pratiche in attesa di esito', null,
             h('ul', { class: 'list' }, d.permits.map((pe) => h('li', {}, h('a', { class: 'item', href: `#/progetti/${pe.project_id}/pratiche` },
               h('div', { class: 'item-main' },
@@ -93,49 +107,65 @@
               ? h('ul', { class: 'list' }, d.journal.map((j) => h('li', {}, h('a', { class: 'item', href: `#/progetti/${j.project_id}/diario` },
                 h('div', { class: 'item-main' },
                   h('div', { class: 'item-meta' }, `${D.date(j.entry_date)} · ${D.JOURNAL_KIND[j.kind] || j.kind} · ${j.project_code}`),
-                  h('div', { class: 'item-title', style: 'white-space:nowrap' }, j.text))))))
+                  h('div', { class: 'item-title', style: 'white-space:nowrap' }, j.text)),
+                D.icon('chevron', 16)))))
               : empty('Le note dei sopralluoghi, delle riunioni e delle telefonate compariranno qui.'))),
         h('div', {},
-          card('Prossime scadenze', h('a', { class: 'btn ghost small', href: '#/scadenze' }, 'Tutte →'),
-            deadlines.length
-              ? h('ul', { class: 'list' }, deadlines.map((t) => taskRow(t)))
-              : empty('Nessuna scadenza nei prossimi 14 giorni.')),
+          card('Prossime scadenze', h('a', { class: 'btn ghost small', href: '#/scadenze' }, 'Tutte', D.icon('arrow', 14)),
+            deadlines.length ? h('ul', { class: 'list' }, deadlines.map((t) => taskRow(t))) : empty('Nessuna scadenza nei prossimi 14 giorni.')),
           f && f.overdue.length ? card('Fatture da incassare', null,
             h('ul', { class: 'list' }, f.overdue.map((r) => h('li', {}, h('a', { class: 'item', href: `#/progetti/${r.project_id}/economia` },
               h('div', { class: 'item-main' }, h('div', { class: 'item-title' }, r.description), h('div', { class: 'item-meta' }, `${r.project_code} · fatturata il ${D.date(r.invoiced_at)}`)),
-              h('b', { class: 'num' }, D.money(r.amount))))))) : null)));
+              h('span', { class: 'num' }, D.money(r.amount))))))) : null)));
 
-    return {
-      title: `${greeting()}, ${D.user.name.split(' ')[0]}`,
-      nav: 'home',
-      actions: h('button', { class: 'btn primary', onclick: () => projectModal() }, '+ Nuovo progetto'),
-    };
+    return { title: 'Panoramica', nav: 'home', hideTitle: true };
   });
 
   // ---------- Progetti ----------
 
+  // Scheda di un progetto con copertina (foto del progetto o segnaposto con il marchio).
+  function projectCard(p) {
+    const year = (p.start_date || p.created_at || '').slice(0, 4);
+    return h('a', { class: 'pcard', href: `#/progetti/${p.id}` },
+      h('div', { class: 'cover' },
+        p.cover_id ? h('img', { src: fileUrl(p.cover_id), alt: '', loading: 'lazy' })
+          : h('div', { class: 'cover-empty' }, h('img', { src: 'assets/logo-white.svg', alt: '' })),
+        D.statusBadge(p.status)),
+      h('div', { class: 'pcard-body' },
+        h('div', { class: 'pcard-title' }, p.title),
+        h('div', { class: 'item-meta' }, [p.intervention, p.city, year].filter(Boolean).join(' · ') || p.code),
+        h('div', { class: 'pcard-foot' },
+          h('span', { class: 'code' }, p.code),
+          progress(Number(p.phases_done), Number(p.phases_total)),
+          h('span', { class: 'item-meta' }, `${Number(p.phases_done)}/${Number(p.phases_total)}`))));
+  }
+
   D.route('/progetti(?:\\?(\\w+))?', async (page, initial) => {
     let status = initial || 'attivi';
     let q = '';
-    const tbody = h('tbody');
+    let view = 'grid';
+    try { view = localStorage.getItem('domus.projectsView') || 'grid'; } catch { /* nessuna preferenza salvata */ }
     const wrap = h('div', {});
 
     async function load() {
       const list = await D.get(`projects&status=${encodeURIComponent(status === 'tutti' ? '' : status)}&q=${encodeURIComponent(q)}`);
-      tbody.replaceChildren(...list.map((p) => h('tr', { onclick: () => D.go(`/progetti/${p.id}`), tabindex: 0, onkeydown: (e) => { if (e.key === 'Enter') D.go(`/progetti/${p.id}`); } },
+      if (!list.length) {
+        wrap.replaceChildren(h('div', { class: 'card' }, empty(q || status !== 'attivi' ? 'Nessun progetto corrisponde ai filtri.' : 'Ancora nessun progetto.',
+          plusBtn('Crea il primo progetto', () => projectModal()))));
+        return;
+      }
+      if (view === 'grid') { wrap.replaceChildren(h('div', { class: 'cards' }, list.map(projectCard))); return; }
+      const tbody = h('tbody', {}, list.map((p) => h('tr', { onclick: () => D.go(`/progetti/${p.id}`), tabindex: 0, onkeydown: (e) => { if (e.key === 'Enter') D.go(`/progetti/${p.id}`); } },
         h('td', {}, h('span', { class: 'code' }, p.code)),
         h('td', {}, h('div', { class: 'item-title' }, p.title), h('div', { class: 'item-meta' }, [p.intervention, p.city].filter(Boolean).join(' · '))),
         h('td', { class: 'hide-sm' }, p.client_name || h('span', { class: 'muted' }, '—')),
-        h('td', { class: 'hide-sm' }, h('div', { style: 'display:flex;align-items:center;gap:8px' }, progress(Number(p.phases_done), Number(p.phases_total)),
+        h('td', { class: 'hide-sm' }, h('div', { style: 'display:flex;align-items:center;gap:10px' }, progress(Number(p.phases_done), Number(p.phases_total)),
           h('span', { class: 'item-meta' }, p.current_phase || ''))),
         h('td', {}, D.statusBadge(p.status)),
         h('td', { class: 'hide-sm' }, dueLabel(p.next_deadline)))));
-      wrap.replaceChildren(list.length
-        ? h('div', { class: 'card table-wrap', style: 'padding:14px 8px 6px' }, h('table', {},
-          h('thead', {}, h('tr', {}, ['Codice', 'Progetto', 'Cliente', 'Avanzamento', 'Stato', 'Prossima scadenza'].map((t, i) => h('th', { class: [2, 3, 5].includes(i) ? 'hide-sm' : '' }, t)))),
-          tbody))
-        : h('div', { class: 'card' }, empty(q || status !== 'attivi' ? 'Nessun progetto corrisponde ai filtri.' : 'Ancora nessun progetto.',
-          h('button', { class: 'btn primary', onclick: () => projectModal() }, 'Crea il primo progetto'))));
+      wrap.replaceChildren(h('div', { class: 'card table-wrap', style: 'padding:16px 8px 6px' }, h('table', {},
+        h('thead', {}, h('tr', {}, ['Codice', 'Progetto', 'Cliente', 'Avanzamento', 'Stato', 'Scadenza'].map((t, i) => h('th', { class: [2, 3, 5].includes(i) ? 'hide-sm' : '' }, t)))),
+        tbody)));
     }
 
     const tabs = h('div', { class: 'tabs', role: 'tablist' });
@@ -143,15 +173,22 @@
     const drawTabs = () => tabs.replaceChildren(...Object.entries(TABS).map(([k, l]) =>
       h('button', { type: 'button', class: status === k ? 'on' : '', role: 'tab', 'aria-selected': String(status === k), onclick: () => { status = k; drawTabs(); load(); } }, l)));
     drawTabs();
+    const seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Vista' });
+    const drawSeg = () => seg.replaceChildren(
+      h('button', { type: 'button', class: view === 'grid' ? 'on' : '', title: 'Griglia', 'aria-label': 'Vista a griglia', onclick: () => setView('grid') }, D.icon('grid', 15)),
+      h('button', { type: 'button', class: view === 'list' ? 'on' : '', title: 'Elenco', 'aria-label': 'Vista a elenco', onclick: () => setView('list') }, D.icon('list', 15)));
+    const setView = (v) => { view = v; try { localStorage.setItem('domus.projectsView', v); } catch { /* ignora */ } drawSeg(); load(); };
+    drawSeg();
 
     let timer;
     page.append(
       h('div', { class: 'toolbar' },
-        h('input', { class: 'search', type: 'search', placeholder: 'Cerca per titolo, codice, comune, cliente…', 'aria-label': 'Cerca', oninput: (e) => { clearTimeout(timer); q = e.target.value.trim(); timer = setTimeout(load, 200); } }),
-        tabs),
+        h('div', { class: 'search-wrap' }, D.icon('search', 15),
+          h('input', { type: 'search', placeholder: 'Cerca progetti…', 'aria-label': 'Cerca', oninput: (e) => { clearTimeout(timer); q = e.target.value.trim(); timer = setTimeout(load, 200); } })),
+        tabs, h('div', { style: 'flex:1' }), seg),
       wrap);
     await load();
-    return { title: 'Progetti', nav: 'progetti', actions: h('button', { class: 'btn primary', onclick: () => projectModal() }, '+ Nuovo progetto') };
+    return { title: 'Progetti', nav: 'progetti', actions: plusBtn('Nuovo', () => projectModal()) };
   });
 
   async function projectModal(existing, preset = {}) {
@@ -233,6 +270,9 @@
       Object.assign(p, await D.get(`projects/${id}`));
       counts.diario = p.journal.length; counts.documenti = p.files.length; counts.pratiche = p.permits.length;
       counts.ore = p.hours.total ? D.hours(p.hours.total) : 0;
+      const fresh = makeHero();
+      heroEl.replaceWith(fresh);
+      heroEl = fresh;
       show(current);
     };
 
@@ -245,19 +285,35 @@
       body.replaceChildren(TAB_VIEWS[name](p, id, reload));
     }
 
-    page.append(
-      h('div', { class: 'project-head' },
-        h('div', {},
-          h('div', {}, D.statusBadge(p.status)),
-          h('h2', {}, p.title),
-          h('div', { class: 'sub' }, [p.client_name, [p.address, p.city].filter(Boolean).join(', ')].filter(Boolean).join(' · '))),
+    const makeHero = () => {
+      const activePh = p.phases.filter((f) => f.status !== 'non_prevista');
+      const donePh = activePh.filter((f) => f.status === 'completata').length;
+      const pct = activePh.length ? Math.round((donePh / activePh.length) * 100) : 0;
+      const meta = [
+        ['Fasi', `${donePh}/${activePh.length}`],
+        ['Documenti', p.files.length],
+        ['Ore', D.hours(p.hours.total)],
+        p.fee ? ['Onorario', D.money(p.fee)] : null,
+      ].filter(Boolean);
+      return h('section', { class: 'project-hero' },
+        h('img', { class: 'hero-img', src: p.cover_id ? `api.php?r=files/${p.cover_id}&inline=1` : 'assets/img/brand.jpg', alt: '' }),
         h('div', { class: 'head-actions' },
-          h('button', { class: 'btn', onclick: () => window.print(), title: 'Stampa la scheda del progetto' }, 'Stampa'),
-          h('button', { class: 'btn', onclick: () => projectModal(p) }, 'Modifica'),
-          h('button', { class: 'btn danger', onclick: async (e) => {
+          h('button', { class: 'btn icon', title: 'Stampa la scheda', 'aria-label': 'Stampa', onclick: () => window.print() }, D.icon('print', 17)),
+          h('button', { class: 'btn icon', title: 'Modifica', 'aria-label': 'Modifica', onclick: () => projectModal(p) }, D.icon('edit', 17)),
+          h('button', { class: 'btn icon danger', title: 'Elimina', 'aria-label': 'Elimina', onclick: async (e) => {
             if (!D.confirm(`Eliminare definitivamente il progetto ${p.code} con fasi, scadenze, note, documenti e pratiche?`)) return;
             if (await D.run(e.currentTarget, () => D.del(`projects/${id}`), 'Progetto eliminato') !== undefined) { await D.refreshOverdue(); D.go('/progetti'); }
-          } }, 'Elimina'))),
+          } }, D.icon('trash', 17))),
+        h('div', { class: 'hero-body' },
+          h('div', { style: 'display:flex;gap:12px;align-items:center' }, h('span', { class: 'eyebrow' }, `Progetto · ${p.code}`), D.statusBadge(p.status)),
+          h('h2', {}, p.title),
+          (p.city || p.address || p.client_name) ? h('div', { class: 'place' }, D.icon('pin', 15), [[p.address, p.city].filter(Boolean).join(', '), p.client_name].filter(Boolean).join(' · ')) : null,
+          h('div', { class: 'hero-meta' }, meta.map(([k, v]) => h('div', {}, h('b', {}, v), h('span', {}, k)))),
+          h('div', { class: 'hero-progress' }, h('span', {}, 'Avanzamento'), progress(donePh, activePh.length), h('span', {}, `${pct}%`))));
+    };
+    let heroEl = makeHero();
+    page.append(
+      heroEl,
       bar,
       body);
     show(current);
@@ -337,7 +393,7 @@
               h('b', {}, D.JOURNAL_KIND[j.kind] || j.kind), h('span', {}, D.date(j.entry_date)), j.user_name ? h('span', {}, `· ${j.user_name}`) : null,
               h('button', { class: 'btn ghost small x', type: 'button', 'aria-label': 'Elimina nota', onclick: async (e) => {
                 if (D.confirm('Eliminare questa nota?') && await D.run(e.currentTarget, () => D.del(`journal/${j.id}`)) !== undefined) reload();
-              } }, '✕')),
+              } }, D.icon('x', 14))),
             h('div', { class: 'entry-text' }, j.text))))
           : h('p', { class: 'muted small mt' }, 'Nessuna nota ancora.')));
     },
@@ -369,9 +425,10 @@
         ondragover: (e) => { e.preventDefault(); drop.classList.add('over'); },
         ondragleave: () => drop.classList.remove('over'),
         ondrop: (e) => { e.preventDefault(); drop.classList.remove('over'); send(e.dataTransfer.files); } },
+      D.icon('upload', 26),
       h('div', { class: 'dz-title' }, 'Trascina qui tavole, foto e documenti'),
       h('div', { class: 'dz-actions' },
-        h('button', { class: 'btn primary', type: 'button', onclick: () => picker.click() }, 'Scegli file'),
+        h('button', { class: 'btn primary', type: 'button', onclick: () => picker.click() }, 'Scegli file', D.icon('arrow', 15)),
         catSel, status),
       h('div', { class: 'muted small' }, `PDF, immagini, DWG/DXF, IFC, documenti Office, ZIP… · massimo ${D.phpSize(D.limits?.max_file)} per file`),
       picker);
@@ -391,18 +448,23 @@
         const url = `api.php?r=files/${f.id}`;
         const sel = D.select('category', D.FILE_CATEGORY, f.category, { 'aria-label': 'Categoria', class: 'mini' });
         sel.addEventListener('change', async () => { if (await D.run(sel, () => D.put(`files/${f.id}`, { category: sel.value })) !== undefined) reload(); });
+        const isCover = f.id === p.cover_id;
         return h('figure', { class: 'file' },
           h('a', { class: 'file-thumb', href: `${url}&inline=1`, target: '_blank', rel: 'noopener', title: 'Apri' },
-            f.preview ? h('img', { src: `${url}&inline=1`, alt: f.name, loading: 'lazy' }) : h('span', { class: 'file-ext' }, ext)),
+            f.preview ? h('img', { src: `${url}&inline=1`, alt: f.name, loading: 'lazy' }) : h('span', { class: 'file-ext' }, ext),
+            isCover ? h('span', { class: 'badge in_corso file-cover' }, 'Copertina') : null),
           h('figcaption', {},
             h('div', { class: 'file-name', title: f.name }, f.name),
             h('div', { class: 'item-meta' }, `${D.size(f.size)} · ${D.date(f.created_at)}${f.user_name ? ` · ${f.user_name}` : ''}`),
             h('div', { class: 'file-actions' },
               sel,
-              h('a', { class: 'btn small', href: url, download: '' }, 'Scarica'),
-              h('button', { class: 'btn ghost small', type: 'button', 'aria-label': `Elimina ${f.name}`, onclick: async (e) => {
+              h('a', { class: 'btn small', href: url, download: '' }, D.icon('download', 14), 'Scarica'),
+              f.preview && !isCover ? h('button', { class: 'btn icon small', type: 'button', title: 'Usa come copertina', 'aria-label': 'Usa come copertina', onclick: async (e) => {
+                if (await D.run(e.currentTarget, () => D.put(`projects/${id}/cover`, { file_id: f.id }), 'Copertina aggiornata') !== undefined) D.render();
+              } }, D.icon('star', 14)) : null,
+              h('button', { class: 'btn icon small', type: 'button', title: 'Elimina', 'aria-label': `Elimina ${f.name}`, onclick: async (e) => {
                 if (D.confirm(`Eliminare "${f.name}"?`) && await D.run(e.currentTarget, () => D.del(`files/${f.id}`), 'File eliminato') !== undefined) reload();
-              } }, '✕'))));
+              } }, D.icon('trash', 14)))));
       }
 
       draw();
@@ -411,7 +473,7 @@
 
     // ----- Pratiche edilizie -----
     pratiche(p, id, reload) {
-      const add = h('button', { class: 'btn primary', onclick: () => permitModal(id, null, reload) }, '+ Nuova pratica');
+      const add = plusBtn('Nuova pratica', () => permitModal(id, null, reload));
       if (!p.permits.length) {
         return h('div', { class: 'card' }, empty('Nessuna pratica per questo progetto: CILA, SCIA, Permesso di costruire, paesaggistica…', add));
       }
@@ -440,7 +502,7 @@
       const { items, summary: s } = p.payments;
       const pct = (v) => (s.fee ? Math.min(100, Math.round((v / s.fee) * 100)) : 0);
       const stat = (label, value, hint) => h('div', { class: 'stat small' }, h('div', { class: 'n' }, D.money(value)), h('div', { class: 'l' }, label), hint ? h('div', { class: 'item-meta' }, hint) : null);
-      const add = h('button', { class: 'btn primary', onclick: () => paymentModal(id, null, reload) }, '+ Nuova rata');
+      const add = plusBtn('Nuova rata', () => paymentModal(id, null, reload));
 
       const rows = items.map((r) => {
         const state = r.paid_at ? ['Incassata', 'concluso'] : r.invoiced_at ? ['Fatturata', 'preventivo'] : ['Da fatturare', 'sospeso'];
@@ -494,7 +556,7 @@
               h('b', { class: 'num' }, D.hours(r.hours)),
               (D.isAdmin() || r.user_id === D.user.id) ? h('button', { class: 'btn ghost small', 'aria-label': 'Elimina', onclick: async (e) => {
                 if (D.confirm('Eliminare questa registrazione?') && await D.run(e.currentTarget, () => D.del(`hours/${r.id}`)) !== undefined) reload();
-              } }, '✕') : null)))
+              } }, D.icon('x', 14)) : null)))
             : h('p', { class: 'muted small mt' }, 'Nessuna ora registrata.'))),
         h('div', {}, card('Totale', null,
           h('div', { class: 'big-number' }, D.hours(total)),
@@ -564,18 +626,19 @@
       const list = await D.get(`clients&q=${encodeURIComponent(q)}`);
       wrap.replaceChildren(list.length
         ? h('div', { class: 'card' }, h('ul', { class: 'list' }, list.map((c) => h('li', {}, h('a', { class: 'item', href: `#/clienti/${c.id}` },
+          h('div', { class: 'avatar', 'aria-hidden': 'true' }, D.initials(c.name)),
           h('div', { class: 'item-main' },
             h('div', { class: 'item-title' }, c.name),
             h('div', { class: 'item-meta' }, [D.CLIENT_KIND[c.kind], c.city, c.phone, c.email].filter(Boolean).join(' · '))),
-          h('span', { class: 'item-meta' }, `${c.projects_count} progett${Number(c.projects_count) === 1 ? 'o' : 'i'}`))))))
+          h('span', { class: 'item-meta' }, `${c.projects_count} progett${Number(c.projects_count) === 1 ? 'o' : 'i'}`), D.icon('chevron', 16, 'chev'))))))
         : h('div', { class: 'card' }, empty(q ? 'Nessun cliente trovato.' : 'Ancora nessun cliente.', q ? null : h('button', { class: 'btn primary', onclick: () => clientModal() }, 'Aggiungi il primo cliente'))));
     }
     let timer;
     page.append(
-      h('div', { class: 'toolbar' }, h('input', { class: 'search', type: 'search', placeholder: 'Cerca per nome, comune, codice fiscale…', 'aria-label': 'Cerca', oninput: (e) => { clearTimeout(timer); q = e.target.value.trim(); timer = setTimeout(load, 200); } })),
+      h('div', { class: 'toolbar' }, h('div', { class: 'search-wrap' }, D.icon('search', 15), h('input', { type: 'search', placeholder: 'Cerca per nome, comune, codice fiscale…', 'aria-label': 'Cerca', oninput: (e) => { clearTimeout(timer); q = e.target.value.trim(); timer = setTimeout(load, 200); } }))),
       wrap);
     await load();
-    return { title: 'Clienti', nav: 'clienti', actions: h('button', { class: 'btn primary', onclick: () => clientModal() }, '+ Nuovo cliente') };
+    return { title: 'Clienti', nav: 'clienti', actions: plusBtn('Nuovo', () => clientModal()) };
   });
 
   function clientModal(existing) {
@@ -618,18 +681,21 @@
     ].filter(([, v]) => v);
 
     page.append(
-      h('div', { class: 'project-head' },
-        h('div', {}, h('h2', {}, c.name), h('div', { class: 'sub' }, [D.CLIENT_KIND[c.kind], c.city].filter(Boolean).join(' · '))),
-        h('div', { style: 'display:flex;gap:8px' },
-          h('button', { class: 'btn', onclick: () => clientModal(c) }, 'Modifica'),
-          h('button', { class: 'btn danger', onclick: async (e) => {
+      h('div', { class: 'client-head' },
+        h('div', {},
+          h('div', { class: 'eyebrow' }, `Cliente · ${D.CLIENT_KIND[c.kind] || ''}`),
+          h('h2', {}, c.name),
+          c.city ? h('div', { class: 'place' }, D.icon('pin', 15), c.city) : null),
+        h('div', { class: 'head-btns' },
+          h('button', { class: 'btn', onclick: () => clientModal(c) }, D.icon('edit', 15), 'Modifica'),
+          h('button', { class: 'btn icon danger', 'aria-label': 'Elimina cliente', title: 'Elimina', onclick: async (e) => {
             const msg = c.projects.length
               ? `Eliminare il cliente "${c.name}"? I suoi ${c.projects.length} progetti restano, senza cliente collegato.`
               : `Eliminare il cliente "${c.name}"?`;
             if (D.confirm(msg) && await D.run(e.currentTarget, () => D.del(`clients/${id}`), 'Cliente eliminato') !== undefined) D.go('/clienti');
-          } }, 'Elimina'))),
+          } }, D.icon('trash', 15)))),
       h('div', { class: 'grid-2' },
-        h('div', {}, card('Progetti', h('button', { class: 'btn small', onclick: () => projectModal(null, { client_id: c.id }) }, '+ Nuovo'),
+        h('div', {}, card('Progetti', h('button', { class: 'btn small', onclick: () => projectModal(null, { client_id: c.id }) }, D.icon('plus', 13), 'Nuovo'),
           c.projects.length
             ? h('ul', { class: 'list' }, c.projects.map((p) => h('li', {}, h('a', { class: 'item', href: `#/progetti/${p.id}` },
               h('div', { class: 'item-main' }, h('div', { class: 'item-title' }, p.title), h('div', { class: 'item-meta' }, h('span', { class: 'code' }, p.code), p.city ? ` · ${p.city}` : '')),
@@ -749,7 +815,7 @@
 
     const users = await D.get('users');
     const team = h('ul', { class: 'list' }, users.map((u) => h('li', { class: `item${Number(u.active) ? '' : ' inactive'}` },
-      h('div', { class: 'avatar', 'aria-hidden': 'true' }, u.name.split(' ').map((x) => x[0]).slice(0, 2).join('').toUpperCase()),
+      h('div', { class: `avatar${Number(u.active) ? ' online' : ''}`, 'aria-hidden': 'true' }, D.initials(u.name)),
       h('div', { class: 'item-main' },
         h('div', { class: 'item-title' }, u.name, u.id === D.user.id ? h('span', { class: 'muted' }, ' (tu)') : null),
         h('div', { class: 'item-meta' }, `${u.email} · ${D.ROLE[u.role]}${Number(u.active) ? '' : ' · disattivato'}${Number(u.hours_month) ? ` · ${D.hours(u.hours_month)} questo mese` : ''}`)),
@@ -758,7 +824,7 @@
     page.append(h('div', { class: 'grid-2' },
       h('div', {},
         card('Studio', null, studio),
-        card('Collaboratori', h('button', { class: 'btn small', onclick: () => userModal(null) }, '+ Aggiungi'),
+        card('Collaboratori', h('button', { class: 'btn small', onclick: () => userModal(null) }, D.icon('plus', 13), 'Aggiungi'),
           h('p', { class: 'item-meta', style: 'margin:-6px 0 8px' }, 'I collaboratori vedono progetti, clienti, documenti e scadenze. Non vedono l\'economia e le impostazioni.'),
           team)),
       h('div', {},

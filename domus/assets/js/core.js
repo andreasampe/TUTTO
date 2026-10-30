@@ -205,7 +205,7 @@ D.modal = function (title, body) {
   const onKey = (e) => { if (e.key === 'Escape') close(); };
   const bg = D.h('div', { class: 'modal-bg', onmousedown: (e) => { if (e.target === bg) close(); } },
     D.h('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
-      D.h('div', { class: 'modal-head' }, D.h('h2', {}, title), D.h('button', { class: 'btn ghost', type: 'button', onclick: close, 'aria-label': 'Chiudi' }, '✕')),
+      D.h('div', { class: 'modal-head' }, D.h('h2', {}, title), D.h('button', { class: 'btn ghost icon', type: 'button', onclick: close, 'aria-label': 'Chiudi' }, D.icon('x', 18))),
       D.h('div', { class: 'modal-body' }, body)));
   document.body.append(bg);
   document.addEventListener('keydown', onKey);
@@ -242,39 +242,52 @@ D.render = async function () {
   window.scrollTo(0, 0);
 };
 
+D.MOTTO = [['D', 'esign'], ['O', 'rganize'], ['M', 'odel'], ['U', 'nify'], ['S', 'implify']];
+D.motto = (cls) => D.h('div', { class: cls, 'aria-label': 'Design. Organize. Model. Unify. Simplify.' },
+  D.MOTTO.map(([a, b]) => D.h('span', {}, D.h('b', {}, a), b)));
+D.initials = (name) => String(name || '?').split(/\s+/).map((x) => x[0]).slice(0, 2).join('').toUpperCase();
+
 D.layout = function (meta, page) {
   const app = document.getElementById('app');
-  const navLink = (href, label, key, count) => D.h('a', { href: `#${href}`, class: meta.nav === key ? 'active' : '' },
-    label, count ? D.h('span', { class: 'count', title: 'Scadenze superate' }, count) : null);
-  const iconUrl = document.querySelector('link[rel=icon]').getAttribute('href');
+  const navLink = (href, label, key, icon, count) => D.h('a', { href: `#${href}`, class: meta.nav === key ? 'active' : '' },
+    D.icon(icon), label, count ? D.h('span', { class: 'count', title: 'Scadenze superate' }, count) : null);
+
+  const top = D.h('header', { class: 'top' },
+    D.h('button', { class: 'menu-btn', type: 'button', 'aria-label': 'Menu', onclick: () => document.body.classList.toggle('nav-open') }, D.icon('list', 22)),
+    meta.back ? D.h('a', { class: 'crumb', href: `#${meta.back[0]}` }, D.icon('back', 15), meta.back[1]) : null,
+    meta.hideTitle ? null : D.h('h1', {}, meta.title),
+    D.h('div', { class: 'spacer' }),
+    meta.actions || null);
 
   app.replaceChildren(D.h('div', { class: 'shell' },
     D.h('aside', { class: 'side' },
-      D.h('div', { class: 'brand' }, D.h('img', { src: iconUrl, alt: '' }),
-        D.h('div', {}, D.h('b', {}, D.appName), D.studioName ? D.h('small', {}, D.studioName) : null)),
+      D.h('a', { class: 'brand', href: '#/' }, D.logo(30),
+        D.h('div', {}, D.h('b', {}, (D.appName || 'DOMUS').toUpperCase()), D.studioName ? D.h('small', {}, D.studioName) : null)),
       D.h('nav', { class: 'nav', onclick: () => document.body.classList.remove('nav-open') },
-        navLink('/', 'Panoramica', 'home'),
-        navLink('/progetti', 'Progetti', 'progetti'),
-        navLink('/clienti', 'Clienti', 'clienti'),
-        navLink('/scadenze', 'Scadenze', 'scadenze', D.overdue),
-        navLink('/calendario', 'Calendario', 'calendario'),
-        navLink('/impostazioni', 'Impostazioni', 'impostazioni')),
+        navLink('/', 'Panoramica', 'home', 'home'),
+        navLink('/progetti', 'Progetti', 'progetti', 'projects'),
+        navLink('/clienti', 'Clienti', 'clienti', 'clients'),
+        navLink('/scadenze', 'Scadenze', 'scadenze', 'tasks', D.overdue),
+        navLink('/calendario', 'Calendario', 'calendario', 'calendar'),
+        navLink('/impostazioni', 'Impostazioni', 'impostazioni', 'settings')),
       D.h('button', { class: 'search-trigger', type: 'button', onclick: () => D.palette() },
-        D.h('span', {}, 'Cerca…'), D.h('kbd', {}, navigator.platform.includes('Mac') ? '⌘K' : 'Ctrl K')),
+        D.icon('search', 15), D.h('span', {}, 'Cerca'), D.h('kbd', {}, /Mac|iP/.test(navigator.platform) ? '⌘K' : 'Ctrl K')),
+      D.motto('motto'),
       D.h('div', { class: 'side-foot' },
-        D.h('span', {}, D.user.name, D.h('small', {}, D.ROLE[D.user.role] || '')),
-        D.h('button', { type: 'button', onclick: D.logout }, 'Esci'))),
+        D.h('div', { class: 'avatar small online', 'aria-hidden': 'true' }, D.initials(D.user.name)),
+        D.h('div', { class: 'who' }, D.user.name, D.h('small', {}, D.ROLE[D.user.role] || '')),
+        D.h('button', { class: 'btn ghost icon small', type: 'button', title: 'Esci', 'aria-label': 'Esci', onclick: D.logout }, D.icon('logout', 16)))),
     D.h('main', { class: 'main' },
-      D.h('header', { class: 'top' },
-        D.h('button', { class: 'menu-btn', type: 'button', 'aria-label': 'Menu', onclick: () => document.body.classList.toggle('nav-open') }, '☰'),
-        meta.back ? D.h('a', { class: 'crumb', href: `#${meta.back[0]}` }, `← ${meta.back[1]}`) : null,
-        D.h('h1', {}, meta.title),
-        D.h('div', { class: 'spacer' }),
-        meta.actions || null),
-      D.h('div', { class: 'print-head' }, D.h('b', {}, D.studioName || D.appName), ` · ${meta.title} · stampato il ${D.date(D.today())}`),
+      top,
+      D.h('div', { class: 'print-head' }, `${D.studioName || D.appName} · ${meta.title} · ${D.date(D.today())}`),
       page)));
   document.title = `${meta.title} · ${D.appName}`;
 };
+
+// La barra in alto prende una linea sottile quando si scorre.
+window.addEventListener('scroll', () => {
+  document.querySelector('.top')?.classList.toggle('scrolled', window.scrollY > 8);
+}, { passive: true });
 
 // ---------- accesso ----------
 
@@ -312,27 +325,35 @@ D.logout = async function () {
 
 D.authScreen = function (setup) {
   const app = document.getElementById('app');
-  const iconUrl = document.querySelector('link[rel=icon]').getAttribute('href');
-  const form = D.h('form', { class: 'form', onsubmit: async (e) => {
+  const form = D.h('form', { class: 'form auth-form', onsubmit: async (e) => {
     e.preventDefault();
     const out = await D.submit(form, (d) => D.post(setup ? 'auth/setup' : 'auth/login', d));
     if (out) { D.csrf = out.csrf; D.boot(); }
   } },
   setup ? [
-    D.field('Nome dello studio', D.input('studio_name', '', { placeholder: 'es. Studio di Architettura Rossi' })),
+    D.field('Nome dello studio', D.input('studio_name', '', { placeholder: 'es. Studio Pucci Architettura' })),
     D.field('Il tuo nome', D.input('name', '', { autocomplete: 'name', required: true }), { required: true }),
   ] : null,
   D.field('Email', D.input('email', '', { type: 'email', autocomplete: 'username', required: true }), { required: true }),
   D.field('Password', D.input('password', '', { type: 'password', autocomplete: setup ? 'new-password' : 'current-password', required: true, minlength: setup ? 10 : null }),
     { required: true, hint: setup ? 'Almeno 10 caratteri' : null }),
-  D.h('button', { class: 'btn primary', type: 'submit', style: 'justify-content:center;padding:10px' }, setup ? 'Crea account e inizia' : 'Accedi'));
+  D.h('div', { style: 'margin-top:6px' },
+    D.h('button', { class: 'btn primary', type: 'submit' }, setup ? 'Crea account e inizia' : 'Accedi', D.icon('arrow', 16))));
 
-  app.replaceChildren(D.h('div', { class: 'auth' }, D.h('div', { class: 'auth-box' },
-    D.h('div', { class: 'brand' }, D.h('img', { src: iconUrl, alt: '' }), D.h('b', {}, D.appName)),
-    D.h('div', { class: 'card' },
-      D.h('h1', {}, setup ? 'Benvenuto' : 'Accedi'),
-      D.h('p', {}, setup ? 'Primo avvio: crea l\'account con cui entrerai in DOMUS.' : (D.studioName || 'Area riservata dello studio')),
-      form))));
+  app.replaceChildren(D.h('div', { class: 'auth' },
+    D.h('div', { class: 'auth-panel' },
+      D.logo(34),
+      D.h('div', { class: 'auth-center' },
+        D.h('div', { class: 'eyebrow' }, D.studioName || 'DOMUS'),
+        D.h('h1', { class: 'display' }, setup ? 'Dall’idea' : 'Bentornato', D.h('br'), setup ? 'al progetto.' : 'in studio.'),
+        D.h('p', { class: 'lead' }, setup
+          ? 'Primo avvio: crea l’account con cui entrerai in DOMUS. Progetti, clienti, pratiche e documenti dello studio in un unico ambiente.'
+          : 'Progetti, clienti, pratiche e documenti dello studio in un unico ambiente.'),
+        form),
+      D.h('div', { class: 'auth-foot' }, 'Design · Organize · Model · Unify · Simplify')),
+    D.h('div', { class: 'auth-visual', 'aria-hidden': 'true' },
+      D.h('img', { src: 'assets/img/login.jpg', alt: '' }),
+      D.motto('acronym'))));
   document.title = D.appName;
   setTimeout(() => form.querySelector('input')?.focus(), 30);
 };
@@ -365,7 +386,7 @@ D.palette = function () {
     if (e.key === 'ArrowUp') { e.preventDefault(); sel = Math.max(sel - 1, 0); draw(); }
     if (e.key === 'Enter' && items[sel]) open(items[sel]);
   });
-  const close = D.modal('Cerca', D.h('div', { class: 'palette' }, input, list));
+  const close = D.modal('Cerca', D.h('div', { class: 'palette' }, D.h('div', { class: 'search-wrap' }, D.icon('search', 17), input), list));
   draw();
 };
 

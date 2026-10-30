@@ -11,6 +11,13 @@ final class Projects
     public const PHASE_STATUSES = ['da_fare', 'in_corso', 'completata', 'non_prevista'];
     public const JOURNAL_KINDS = ['nota', 'sopralluogo', 'riunione', 'telefonata', 'email', 'pratica'];
 
+    // Copertina: quella scelta (se il file esiste ancora), altrimenti la prima immagine, preferendo le foto.
+    private const COVER = "COALESCE(
+        (SELECT f.id FROM files f WHERE f.id = p.cover_file_id AND f.project_id = p.id),
+        (SELECT f.id FROM files f WHERE f.project_id = p.id AND f.mime IN ('image/jpeg','image/png','image/webp','image/gif')
+         ORDER BY f.category = 'foto' DESC, f.id LIMIT 1)
+    )";
+
     /** @return list<array<string,mixed>> */
     public static function list(string $status = '', string $q = ''): array
     {
@@ -26,8 +33,8 @@ final class Projects
             $where[] = '(p.title LIKE ? OR p.code LIKE ? OR p.city LIKE ? OR p.address LIKE ? OR c.name LIKE ?)';
             array_push($params, ...array_fill(0, 5, '%' . $q . '%'));
         }
-        $sql = "SELECT p.id, p.code, p.title, p.status, p.city, p.address, p.due_date, p.intervention,
-                       c.name AS client_name, p.client_id,
+        $sql = "SELECT p.id, p.code, p.title, p.status, p.city, p.address, p.due_date, p.intervention, p.start_date, p.created_at,
+                       c.name AS client_name, p.client_id, " . self::COVER . " AS cover_id,
                        (SELECT COUNT(*) FROM phases f WHERE f.project_id = p.id AND f.status != 'non_prevista') AS phases_total,
                        (SELECT COUNT(*) FROM phases f WHERE f.project_id = p.id AND f.status = 'completata') AS phases_done,
                        (SELECT name FROM phases f WHERE f.project_id = p.id AND f.status IN ('in_corso','da_fare') ORDER BY f.status = 'in_corso' DESC, f.position LIMIT 1) AS current_phase,
@@ -42,7 +49,7 @@ final class Projects
     public static function get(int $id, ?array $user = null): array
     {
         $p = Db::one(
-            'SELECT p.*, c.name AS client_name, c.phone AS client_phone, c.email AS client_email
+            'SELECT p.*, ' . self::COVER . ' AS cover_id, c.name AS client_name, c.phone AS client_phone, c.email AS client_email
              FROM projects p LEFT JOIN clients c ON c.id = p.client_id WHERE p.id = ?',
             [$id]
         );
@@ -129,6 +136,19 @@ final class Projects
         if (!Db::value('SELECT 1 FROM projects WHERE id = ?', [$id])) {
             throw new HttpError(404, 'Progetto non trovato');
         }
+    }
+
+    public static function setCover(int $id, array $in): void
+    {
+        self::exists($id);
+        $fileId = $in['file_id'] ?? null;
+        if ($fileId !== null && !Db::value(
+            "SELECT 1 FROM files WHERE id = ? AND project_id = ? AND mime IN ('image/jpeg','image/png','image/webp','image/gif')",
+            [$fileId, $id]
+        )) {
+            throw new HttpError(422, 'Come copertina si può usare solo un\'immagine del progetto');
+        }
+        Db::update('projects', $id, ['cover_file_id' => $fileId]);
     }
 
     // ---------- fasi ----------

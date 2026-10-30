@@ -8,7 +8,7 @@ require __DIR__ . '/src/App.php';
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: same-origin');
-header("Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'");
+header("Content-Security-Policy: default-src 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'");
 
 $v = static fn (string $f): string => $f . '?v=' . filemtime(__DIR__ . '/' . $f);
 $name = htmlspecialchars((string) \Domus\App::config('app_name'), ENT_QUOTES);
@@ -18,7 +18,9 @@ $name = htmlspecialchars((string) \Domus\App::config('app_name'), ENT_QUOTES);
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light dark">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="preload" href="assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <title><?= $name ?></title>
   <link rel="icon" href="<?= $v('assets/icon.svg') ?>" type="image/svg+xml">
   <link rel="stylesheet" href="<?= $v('assets/css/domus.css') ?>">
@@ -26,6 +28,7 @@ $name = htmlspecialchars((string) \Domus\App::config('app_name'), ENT_QUOTES);
 <body>
   <div id="app" class="booting" aria-busy="true"></div>
   <script src="<?= $v('assets/js/core.js') ?>"></script>
+  <script src="<?= $v('assets/js/icons.js') ?>"></script>
   <script src="<?= $v('assets/js/views.js') ?>"></script>
 </body>
 </html>

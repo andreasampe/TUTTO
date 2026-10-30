@@ -163,6 +163,11 @@ final class Db
             CREATE INDEX idx_payments_project ON payments(project_id);
             CREATE INDEX idx_hours_project    ON hours(project_id, work_date);
             SQL,
+
+        // Copertina del progetto scelta a mano (altrimenti si usa la prima foto).
+        3 => <<<'SQL'
+            ALTER TABLE projects ADD COLUMN cover_file_id INTEGER;
+            SQL,
     ];
 
     public static function pdo(): PDO

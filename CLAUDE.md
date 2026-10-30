@@ -50,15 +50,17 @@ Webapp gestionale per lo studio di architettura (Chiara Pucci, architetto). Legg
   - `assets/js/core.js` contiene l'oggetto globale `D`: API, `D.h()` per creare elementi (sempre testo, mai `innerHTML` con dati), router a hash, modali, moduli con errori per campo.
   - `assets/js/views.js` contiene le pagine, registrate con `D.route(regex, view)`.
   - `assets/css/domus.css` contiene lo stile.
-- **Stile** (preso dall'icona `assets/icon.svg`):
-  - bianco e nero da tavola tecnica, linee sottili, griglia di costruzione leggera sullo sfondo, nessun colore d'accento;
-  - colori come variabili CSS in `:root`, con tema scuro automatico (`prefers-color-scheme`);
-  - titoli delle schede in maiuscoletto spaziato.
-  - Se l'utente fornisce il file originale dell'icona, sostituire `icon.svg` mantenendo il nome o aggiornando `index.php`.
-
-- **Ruoli**: `admin` e `collaboratore`. `Auth::requireAdmin()` protegge economia, utenti, impostazioni e backup. `Projects::get()` toglie `fee` e `payments` ai collaboratori, e `create`/`update` ignorano `fee` se a scriverlo non è un amministratore.
-- **Documenti**: caricati in multipart su `projects/{id}/files`, con estensioni ammesse da un elenco chiuso (`Files::TYPES`). Vengono salvati con nome casuale in `domus-data/files/<progetto>/` e serviti solo da `api.php?r=files/{id}` (`&inline=1` per l'anteprima).
-- **Scheda progetto**: le schede (`TAB_VIEWS` in `views.js`) cambiano con `history.replaceState`, senza ricaricare la pagina. L'indirizzo è `#/progetti/12/documenti`.
+- **Stile**: **leggi `domus/STILE.md` prima di toccare l'interfaccia.**
+  - Riferimento: le tavole di presentazione che Andrea ha fornito, nero profondo con fotografia architettonica in cemento.
+  - Tema **solo scuro**; la stampa è chiara.
+  - Titoli Inter Light grandi, etichette maiuscole spaziate, pulsanti a pillola con bordo sottile, icone a linea (`assets/js/icons.js`, `D.icon(nome)`).
+  - Il carattere Inter è incluso in `assets/fonts/`, nessun servizio esterno.
+- **Marchio**:
+  - `assets/icon.svg` (favicon: la D che accoglie la casa, su griglia di costruzione, ricostruita in vettoriale dalla favicon di Andrea);
+  - `assets/logo-white.svg` (solo marchio a linea);
+  - motto: **D**esign · **O**rganize · **M**odel · **U**nify · **S**implify.
+- **Immagini** in `assets/img/`: `home.jpg` (panoramica, arco in cemento a forma di D con la casa), `login.jpg` (villa), `brand.jpg` (dettaglio in cemento, testata dei progetti senza copertina). Sono ritagli a bassa risoluzione dalle tavole: Andrea fornirà gli originali con lo stesso nome.
+- **Copertina dei progetti**: è la foto scelta con la stellina in *Documenti* (`projects.cover_file_id`, migrazione 3), altrimenti la prima immagine caricata.
 
 ### Dati gestiti
 
@@ -85,7 +87,7 @@ Webapp gestionale per lo studio di architettura (Chiara Pucci, architetto). Legg
 
 ### Come provare
 
-- `bash domus/tests/run.sh` avvia il server PHP integrato su un database temporaneo ed esegue i test dell'API in `tests/api_test.php` (86 controlli, tutti verdi alla consegna).
+- `bash domus/tests/run.sh` avvia il server PHP integrato su un database temporaneo ed esegue i test dell'API in `tests/api_test.php` (89 controlli, tutti verdi alla consegna).
 - Per l'interfaccia: `php -S` su una cartella che contiene `domus/` (per simulare il percorso `/domus/` di Local) e Playwright (preinstallato nell'ambiente cloud).
 - In questo ambiente cloud **non si può avviare WordPress** (il codice esterno è bloccato) e **non c'è accesso ai siti esterni**.
 

@@ -6,6 +6,8 @@ Webapp per lo studio di architettura: **progetti** (commesse) con fasi, **client
 - I dati stanno in un **file SQLite** (`domus.sqlite`) nella cartella `domus-data`, fuori dalla parte pubblica del sito.
 - Da *Impostazioni → Backup* si scarica tutto in un file **JSON** leggibile.
 
+Lo stile (colori, caratteri, componenti, immagini) è descritto in [STILE.md](STILE.md).
+
 ## Requisiti
 
 - PHP **8.1** o più recente, con l'estensione **pdo_sqlite** (inclusa in Local e quasi sempre negli hosting).
@@ -68,4 +70,4 @@ Si copiano due cartelle: `domus` (nella parte pubblica) e `domus-data` (un livel
 bash tests/run.sh
 ```
 
-Avvia DOMUS con il server PHP integrato su un database temporaneo e prova tutta l'API (86 controlli): accesso, ruoli, clienti, progetti, fasi, scadenze, diario, documenti, pratiche, economia, ore, calendario, ricerca, backup e protezioni.
+Avvia DOMUS con il server PHP integrato su un database temporaneo e prova tutta l'API (89 controlli): accesso, ruoli, clienti, progetti, fasi, scadenze, diario, documenti, pratiche, economia, ore, calendario, ricerca, backup e protezioni.

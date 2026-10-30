@@ -229,6 +229,15 @@ check('immagine in anteprima (inline)', $s === 200 && str_contains($h, 'inline')
 $f = array_values(array_filter($p['files'], fn ($x) => $x['id'] === $fid))[0];
 check('rinomina mantiene l\'estensione', $f['name'] === 'Pianta PT.pdf' && $f['category'] === 'pratica', $f);
 
+// copertina
+[$s, $list] = call('GET', 'projects&q=lago');
+check('copertina automatica = prima immagine', $list[0]['cover_id'] === $imgId, $list[0]['cover_id'] ?? null);
+[$s] = call('PUT', "projects/$p2id/cover", ['file_id' => $fid]);
+check('un PDF non può essere copertina', $s === 422);
+[$s] = call('PUT', "projects/$p2id/cover", ['file_id' => $imgId]);
+[$s, $p] = call('GET', "projects/$p2id");
+check('copertina scelta', $s === 200 && $p['cover_id'] === $imgId && $p['cover_file_id'] === $imgId);
+
 // pratiche
 [$s, $r] = call('POST', 'permits', ['project_id' => $p2id, 'kind' => 'CILA', 'status' => 'depositata', 'protocol' => '2026/1234', 'authority' => 'Comune di Bracciano']);
 check('pratica creata', $s === 200);

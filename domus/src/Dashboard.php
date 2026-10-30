@@ -37,7 +37,7 @@ final class Dashboard
                  WHERE t.done = 0 AND t.due_date BETWEEN date('now','localtime') AND date('now','localtime','+14 days')
                  ORDER BY t.due_date LIMIT 20"
             ),
-            'active' => array_slice(Projects::list('in_corso'), 0, 8),
+            'active' => array_slice(Projects::list('in_corso'), 0, 6),
             'journal' => Db::all(
                 'SELECT j.id, j.entry_date, j.kind, j.text, j.project_id, p.code AS project_code, p.title AS project_title
                  FROM journal j JOIN projects p ON p.id = j.project_id ORDER BY j.entry_date DESC, j.id DESC LIMIT 6'
