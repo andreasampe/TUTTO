@@ -309,6 +309,15 @@ def calcola(seg_muri: np.ndarray, mappa: Mappa | None, m_per_u: float, *, arredo
         p = origini[m]
         q = p + direzioni[m] * d
         p, q = (float(p[0]), float(p[1])), (float(q[0]), float(q[1]))
+        # altre posizioni lungo il tratto, per spostare la quota dove non si accavalla
+        alternative = []
+        for f in (0.35, 0.65, 0.2, 0.8, 0.1, 0.9):
+            k2 = gruppo.start + round(f * (gruppo.stop - gruppo.start - 1))
+            d2 = float(distanza[k2])
+            if d2 >= minimo and np.isfinite(d2):
+                a2 = origini[k2]
+                b2 = a2 + direzioni[k2] * d2
+                alternative.append(((float(a2[0]), float(a2[1])), (float(b2[0]), float(b2[1])), round(d2, 9)))
         dentro = False
         if arredo[i] or arredo[j]:
             cx, cy, eps = (p[0] + q[0]) / 2, (p[1] + q[1]) / 2, 0.01 / m_per_u
@@ -321,9 +330,15 @@ def calcola(seg_muri: np.ndarray, mappa: Mappa | None, m_per_u: float, *, arredo
         angolo = math.degrees(math.atan2(direzioni[m][1], direzioni[m][0])) % 180
         if angolo > 90.5:  # testo sempre leggibile: da sinistra a destra o dal basso in alto
             angolo -= 180
-        # punteggio: tratto lungo, e a parità meglio una quota orizzontale o verticale
-        punteggio = lunghezza_tratto * (1.2 if min(angolo % 90, 90 - angolo % 90) < 0.5 else 1.0)
-        candidati.append((punteggio, locale, _linea(seg_muri[i]), _linea(seg_muri[j]), Quota("interno", 0, p, q, round(d, 9), angolo), minimo, dentro))
+        # punteggio: tratto lungo; se un muro è inclinato, meglio la quota perpendicolare a quel muro
+        # (inclinata come lui), altrimenti meglio una quota orizzontale o verticale
+        storta = lambda v: min(math.degrees(math.atan2(v[1], v[0])) % 90, 90 - math.degrees(math.atan2(v[1], v[0])) % 90) > 1  # noqa: E731
+        if storta(unitari[i]) or storta(unitari[j]):
+            punteggio = lunghezza_tratto * (1.5 if storta(unitari[i]) else 1.0)
+        else:
+            punteggio = lunghezza_tratto * (1.2 if min(angolo % 90, 90 - angolo % 90) < 0.5 else 1.0)
+        candidati.append((punteggio, locale, _linea(seg_muri[i]), _linea(seg_muri[j]),
+                          Quota("interno", 0, p, q, round(d, 9), angolo, tuple(alternative)), minimo, dentro))
 
     # lo spazio attraversato deve essere largo almeno la luce minima anche di traverso:
     # altrimenti la quota corre dentro un muro disegnato a due linee
@@ -346,7 +361,89 @@ def calcola(seg_muri: np.ndarray, mappa: Mappa | None, m_per_u: float, *, arredo
         if not any(c[1] == s[1] and _stessa_coppia(c[2:4], s[2:4], 0.02 / m_per_u)
                    and (c[1] >= 0 or math.dist(_centro(c[4]), _centro(s[4])) < 1.5 / m_per_u) for s in scelte):
             scelte.append(c)
+    scelte = _senza_ripetizioni(scelte, m_per_u)
     return sorted((c[4] for c in scelte), key=lambda q: (q.angolo, round(q.p1[1], 6), round(q.p1[0], 6)))
+
+
+def _intervallo(q: Quota, u: tuple[float, float]) -> tuple[float, float]:
+    a = q.p1[0] * u[0] + q.p1[1] * u[1]
+    b = q.p2[0] * u[0] + q.p2[1] * u[1]
+    return min(a, b), max(a, b)
+
+
+def _unisci_parti(scelte: list[tuple], m_per_u: float) -> list[tuple]:
+    """Unisce le misure attaccate e di lunghezza diversa dentro lo stesso arredo (letto + cuscino)."""
+    tol, accanto = 0.02 / m_per_u, 0.3 / m_per_u
+    scelte = list(scelte)
+    cambiato = True
+    while cambiato:
+        cambiato = False
+        for x in range(len(scelte)):
+            for y in range(x + 1, len(scelte)):
+                c, s = scelte[x], scelte[y]
+                q, r = c[4], s[4]
+                if not (c[6] and s[6]) or c[1] != s[1] or abs(((r.angolo - q.angolo) + 90) % 180 - 90) > 1:
+                    continue
+                if abs(q.misura - r.misura) <= 0.02 / m_per_u:
+                    continue  # parti uguali (moduli): ci pensa la regola delle misure ripetute
+                a = math.radians(q.angolo)
+                u, n = (math.cos(a), math.sin(a)), (-math.sin(a), math.cos(a))
+                if abs((q.p1[0] - r.p1[0]) * n[0] + (q.p1[1] - r.p1[1]) * n[1]) > accanto:
+                    continue
+                (lo, hi), (rlo, rhi) = _intervallo(q, u), _intervallo(r, u)
+                if abs(hi - rlo) > tol and abs(rhi - lo) > tol:
+                    continue  # non attaccate
+                lunga = c if q.misura >= r.misura else s
+                base = lunga[4].p1
+                t0 = base[0] * u[0] + base[1] * u[1]
+                inizio, fine = min(lo, rlo), max(hi, rhi)
+                p1 = (base[0] + u[0] * (inizio - t0), base[1] + u[1] * (inizio - t0))
+                p2 = (base[0] + u[0] * (fine - t0), base[1] + u[1] * (fine - t0))
+                unita = Quota("interno", 0, p1, p2, round(fine - inizio, 9), q.angolo)
+                scelte[x] = (max(c[0], s[0]), c[1], c[2], s[3], unita, c[5], True)
+                del scelte[y]
+                cambiato = True
+                break
+            if cambiato:
+                break
+    return scelte
+
+
+def _senza_ripetizioni(scelte: list[tuple], m_per_u: float) -> list[tuple]:
+    """Toglie le quote che non servono:
+    - parti DIVERSE attaccate dello stesso arredo, sulla stessa linea (letto + cuscino):
+      diventano una sola quota, l'arredo intero;
+    - stessa misura, stessa direzione, nello stesso locale, a meno di 2 m l'una dall'altra
+      e affiancate (es. due 1.40 tra divano e muro); dentro gli arredi basta che siano
+      vicine (moduli uguali attaccati: una quota sola);
+    - una misura dentro un arredo contenuta in un'altra più lunga dello stesso arredo
+      (il cuscino dentro il letto: resta la quota del letto)."""
+    vicino, tol = 2.0 / m_per_u, 0.02 / m_per_u
+    scelte = _unisci_parti(scelte, m_per_u)
+    tenute: list[tuple] = []
+    for c in sorted(scelte, key=lambda c: -c[4].misura):  # prima le più lunghe
+        q = c[4]
+        a = math.radians(q.angolo)
+        u, n = (math.cos(a), math.sin(a)), (-math.sin(a), math.cos(a))
+        lo, hi = _intervallo(q, u)
+        scarta = False
+        for s in tenute:
+            r = s[4]
+            if abs(((r.angolo - q.angolo) + 90) % 180 - 90) > 1 or (c[1] != s[1] and c[1] >= 0 and s[1] >= 0):
+                continue
+            distanza = abs((q.p1[0] - r.p1[0]) * n[0] + (q.p1[1] - r.p1[1]) * n[1])
+            rlo, rhi = _intervallo(r, u)
+            sovrapposte = min(hi, rhi) - max(lo, rlo) > 0.5 * (hi - lo)
+            uguali = abs(q.misura - r.misura) <= 0.01 / m_per_u
+            if uguali and distanza <= vicino and (sovrapposte or (c[6] and s[6])):
+                scarta = True
+            elif c[6] and s[6] and distanza <= vicino and rlo - tol <= lo and hi <= rhi + tol and r.misura > q.misura:
+                scarta = True
+            if scarta:
+                break
+        if not scarta:
+            tenute.append(c)
+    return tenute
 
 
 def _linea(s: np.ndarray) -> tuple[float, float]:

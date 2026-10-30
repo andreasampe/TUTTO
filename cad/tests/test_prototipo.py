@@ -105,12 +105,20 @@ class Prototipo(unittest.TestCase):
     def test_testi_che_si_toccherebbero_vengono_spostati(self):
         from domus_cad import testi
         # due quote parallele vicinissime: i testi al centro si sovrapporrebbero
-        quote = [{"base": (0, 0), "p1": (0, 0), "p2": (2, 0), "angolo": 0, "testo": "2.00"},
-                 {"base": (0, 0.05), "p1": (0, 0.05), "p2": (1.9, 0.05), "angolo": 0, "testo": "1.90"}]
-        pos = testi.disponi(quote, altezza=0.1, orizzontale=True)
-        self.assertIsNone(pos[0])        # la più lunga resta al centro
-        self.assertIsNotNone(pos[1])     # l'altra si sposta
-        self.assertGreater(abs(pos[1][0] - 0.95) + abs(pos[1][1] - 0.05), 0.1)
+        quote = [{"alternative": [{"base": (0, 0), "p1": (0, 0), "p2": (2, 0), "angolo": 0}], "testo": "2.00"},
+                 {"alternative": [{"base": (0, 0.05), "p1": (0, 0.05), "p2": (1.9, 0.05), "angolo": 0}], "testo": "1.90"}]
+        scelte = testi.disponi(quote, altezza=0.1, orizzontale=True)
+        self.assertEqual(scelte[0], (0, None))   # la più lunga resta al centro
+        x, y = scelte[1][1]                       # l'altra si sposta, ma resta tra i suoi pallini
+        self.assertGreater(abs(x - 0.95) + abs(y - 0.05), 0.1)
+        self.assertTrue(0 < x < 1.9)
+
+    def test_letto_con_cuscino_una_sola_quota(self):
+        esito = self.elabora()
+        letto = [round(q["misura"], 2) for q in esito["quote"] if q["lato"] == "interno"
+                 and round(q["angolo"]) % 180 == 90 and 1.0 <= q["p1"][0] <= 2.4]
+        self.assertIn(2.00, letto)       # letto intero, cuscino compreso
+        self.assertNotIn(0.40, letto)    # niente quota del solo cuscino
 
     def test_profilo_riconosciuto_in_automatico(self):
         rif = ezdxf.new("R2018", setup=True)

@@ -3,8 +3,8 @@
 - **Origine:** `esempi/esempio_artificiale.dxf`
 - **Elaborato:** `esempi/elaborato_esempio.dxf`
 - **Unità:** m · **Scala:** 1:50 · **DXF:** AC1032
-- **Entità:** 26 (LINE 12, LWPOLYLINE 6, TEXT 5, ARC 2, CIRCLE 1)
-- **Layer:** TRAMEZZI, FINESTRE, TESTI, ARREDI, MURI, PORTE
+- **Entità:** 28 (LINE 13, LWPOLYLINE 7, TEXT 5, ARC 2, CIRCLE 1)
+- **Layer:** TRAMEZZI, ARREDI, FINESTRE, TESTI, MURI, PORTE
 
 ## Problemi rilevati nel disegno
 
@@ -14,12 +14,12 @@
 
 | # | Controllo | Esito | Dettaglio |
 |---|---|---|---|
-| 1 | Lettura | ok | 26 entità originali lette |
+| 1 | Lettura | ok | 28 entità originali lette |
 | 2 | Conservazione | ok | tutte le entità originali presenti e invariate |
 | 3 | Layer | ok | presenti: 01Cotas 1, DOMUS_CARTIGLIO, DOMUS_NOTE |
-| 4 | Quote | ok | 41 quote, misure uguali alla geometria (tolleranza 1e-6), testo = misura × 1 |
+| 4 | Quote | ok | 47 quote, misure uguali alla geometria (tolleranza 1e-6), testo = misura × 1 |
 | 5 | Cartiglio | ok | blocco DOMUS_CARTIGLIO con attributi, in basso a destra fuori dal disegno |
-| 6 | Esportazione | ok | elaborato.dxf, 132856 byte, DXF AC1032 |
+| 6 | Esportazione | ok | elaborato.dxf, 144233 byte, DXF AC1032 |
 | 7 | Riapertura | ok | riaperto con ezdxf, audit: 0 errori, 0 correzioni |
 | 8 | Compatibilità AutoCAD | da verificare | da aprire in AutoCAD sul Mac: in questo ambiente AutoCAD non c'è |
 | 9 | Integrità dell'originale | ok | SHA-256 del file originale invariato |
@@ -30,13 +30,13 @@
 
 ## Registro
 
-- Origine: esempi/esempio_artificiale.dxf (SHA-256 093908f166ece1a8…)
-- Letto DXF AC1032: 26 entità, 6 layer
+- Origine: esempi/esempio_artificiale.dxf (SHA-256 c61604a38c677fb1…)
+- Letto DXF AC1032: 28 entità, 6 layer
 - Quote sul layer '01Cotas 1' con lo stile '50' del profilo e le modifiche {'dimscale': 1.0}
 - Generate 22 quote esterne (catene parziali e totali sui 4 lati), muri: MURI, TRAMEZZI
-- Generate 19 quote interne: luci tra muri (minimo 0.5 m) e distanze degli arredi (minimo 0.3 m)
+- Generate 25 quote interne: luci tra muri (minimo 0.5 m) e distanze degli arredi (minimo 0.3 m)
 - Limiti: nessuno · arredi: ARREDI · porte e finestre: FINESTRE, PORTE
-- Testi spostati per non toccarsi: 4 su 41
+- Testi spostati per non toccarsi: 13 su 47
 - Inseriti cartiglio (blocco con attributi) e nota sul layer DOMUS_NOTE
-- Salvato elaborato.dxf (132856 byte)
+- Salvato elaborato.dxf (144233 byte)
 - Creata anteprima.svg

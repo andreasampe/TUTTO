@@ -12,7 +12,7 @@ Le misure vengono SOLO dalle coordinate del disegno: niente valori stimati.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from ezdxf.document import Drawing
 from ezdxf.math import Vec2
@@ -28,6 +28,8 @@ class Quota:
     p2: tuple[float, float]
     misura: float        # in unità di disegno, dalla geometria
     angolo: float = 0.0  # direzione della misura in gradi (quote interne)
+    # altre posizioni possibili della stessa quota lungo il tratto misurato: (p1, p2, misura)
+    alternative: tuple = field(default=(), compare=False, repr=False)
 
 
 def vertici(doc: Drawing, layer: set[str] | None) -> list[Vec2]:

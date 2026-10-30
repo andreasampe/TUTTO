@@ -40,9 +40,13 @@ Cosa viene quotato:
 - **catene esterne** sui muri perimetrali, più le quote totali;
 - **luci interne** da muro a muro in ogni locale, comprese le zone aperte come il garage, quotate così come sono disegnate;
 - **distanze degli arredi** dai muri e tra loro;
-- **misure degli arredi** (tavolo, modulo della cucina): **una sola quota** per misura e per locale, quindi moduli uguali da 60×60 hanno una quota sola.
+- **misure degli arredi** (tavolo, modulo della cucina): **una sola quota** per misura e per locale, quindi moduli uguali da 60×60 hanno una quota sola. Le parti diverse attaccate dello stesso arredo (letto + cuscino) diventano un'unica quota.
 
-Se due testi si toccherebbero, uno si sposta sopra o sotto la linea, oppure lungo la linea, anche fuori dalle estremità. La misura non cambia.
+Regole di leggibilità:
+- niente quote ripetute: stessa misura e direzione a meno di 2 m nello stesso locale vale una quota sola;
+- verso un muro inclinato, la quota è perpendicolare a quel muro;
+- la linea di quota si sposta lungo il tratto misurato per non incrociare le altre;
+- il testo resta tra i suoi pallini, oppure subito sopra o sotto la linea. Mai oltre i pallini, dove AutoCAD allungherebbe la linea.
 
 Le quote vanno **sul layer e con lo stile dello studio**:
 - se il disegno li contiene già, vengono usati così come sono, senza modificarli;

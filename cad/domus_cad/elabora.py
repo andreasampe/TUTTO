@@ -9,7 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import datetime
 from pathlib import Path
 
@@ -125,14 +125,23 @@ def elabora(origine: str, uscita: str, *, unita: str | None = None, scala: int |
     else:
         luci = []
 
-    # testi che non si toccano: dove serve, il testo si sposta (la misura no)
+    # disposizione: linee e testi che si accavallano il meno possibile (la misura non cambia)
     basi_est = quote.basi(esterne, passo=8 * u_per_mm, ingombro=rapporto.estensione)
     t = profili.misura_testo(doc, stile, override)
-    elenco = [{"base": b, "p1": q.p1, "p2": q.p2, "angolo": a, "testo": testi.testo(q.misura, t["fattore"], t["decimali"])}
-              for q, (b, a) in zip(esterne, basi_est)] + \
-             [{"base": interne._centro(q), "p1": q.p1, "p2": q.p2, "angolo": q.angolo,
-               "testo": testi.testo(q.misura, t["fattore"], t["decimali"])} for q in luci]
-    posizioni = testi.disponi(elenco, t["altezza"], t["orizzontale"], t["larghezza"])
+    scritta = lambda m: testi.testo(m, t["fattore"], t["decimali"])  # noqa: E731
+    elenco = [{"alternative": [{"base": b, "p1": q.p1, "p2": q.p2, "angolo": a}], "testo": scritta(q.misura)}
+              for q, (b, a) in zip(esterne, basi_est)]
+    for q in luci:
+        posti = [(q.p1, q.p2, q.misura), *q.alternative]
+        elenco.append({"alternative": [{"base": ((p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2), "p1": p1, "p2": p2,
+                                        "angolo": q.angolo, "misura": m} for p1, p2, m in posti],
+                       "testo": scritta(q.misura)})
+    scelte = testi.disponi(elenco, t["altezza"], t["orizzontale"], t["larghezza"])
+    posizioni = [pos for _, pos in scelte]
+    for k, q in enumerate(luci):  # la quota interna va nella posizione scelta lungo il suo tratto
+        alt = elenco[len(esterne) + k]["alternative"][scelte[len(esterne) + k][0]]
+        luci[k] = replace(q, p1=alt["p1"], p2=alt["p2"], misura=alt["misura"])
+    previste = list(esterne) + luci
     h_quote = quote.disegna(doc, esterne, basi_est, posizioni[:len(esterne)], layer_quote, stile, override)
     h_quote += interne.disegna(doc, luci, posizioni[len(esterne):], layer_quote, stile, override)
     spostati = sum(p is not None for p in posizioni)
@@ -167,7 +176,7 @@ def elabora(origine: str, uscita: str, *, unita: str | None = None, scala: int |
 
     esito = {
         "origine": str(sorgente), "elaborato": str(elaborato), "unita": unita_usate, "scala": scala,
-        "lettura": asdict(rapporto), "quote": [asdict(q) for q in previste], "controlli": controlli,
+        "lettura": asdict(rapporto), "quote": [{k: v for k, v in asdict(q).items() if k != "alternative"} for q in previste], "controlli": controlli,
         "superato": all(c["esito"] in ("ok", "da verificare") for c in controlli), "log": log,
         "handle": {"quote": h_quote, "cartiglio": h_cartiglio, "nota": h_nota},
     }
