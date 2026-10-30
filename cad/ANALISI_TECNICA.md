@@ -39,6 +39,7 @@ Legenda dello stato delle funzioni (punto 17.5): **analizzata** · **implementat
 | **ezdxf** 1.4.2 | libreria Python per DXF | **MIT** | Matura (dal 2011) e mantenuta. Legge e scrive DXF R12–2018, conserva le entità che non conosce. Gestisce quote, blocchi con attributi, layout e anteprime. Funziona su macOS Apple Silicon | Non legge il DWG da sola | **motore del prototipo** (implementata, testata) |
 | LibreCAD | CAD desktop 2D | GPL-2.0 | Gratuito, apre i DXF | Pochi strumenti di automazione; DWG solo in lettura e parziale | eventuale visualizzatore gratuito per controllare i DXF |
 | FreeCAD | CAD 3D parametrico | LGPL-2.1 | Python integrato, BIM | Pesante, eccessivo per il 2D di questa fase | da valutare per la Fase 3+ (modello dell'edificio) |
+| **acadrust** 0.6.1 | libreria Rust DWG/DXF (quella usata da CADCraft) | **MPL-2.0** (copyleft solo sui file modificati della libreria; utilizzabile in un prodotto commerciale) | Legge e scrive DWG R13–2018 senza AutoCAD | Il 30/10/2026 la compilazione di un convertitore di prova è stata **bloccata dalle regole di sicurezza di questo ambiente cloud** (niente esecuzione di codice esterno). Si può riprovare sul Mac | candidato n. 1 per il caricamento diretto dei DWG |
 | LibreDWG (`dwg2dxf`) | convertitore DWG↔DXF | GPL-3.0 | Open source | La scrittura DWG è sperimentale. La GPL-3 va valutata se il software sarà distribuito | da provare sul Mac come convertitore |
 | ODA File Converter | convertitore DWG↔DXF | **gratuito ma proprietario** (non open source) | Molto affidabile | Licenza da leggere: il punto 2.2 ricorda che "gratuito non significa open source" | **escluso** finché la licenza non è verificata |
 
@@ -75,7 +76,9 @@ Se l'hosting non può eseguire Python, vale l'architettura del punto 3 della spe
 
 ## 7. Informazioni che mancano davvero
 
-1. **Una planimetria reale**, DWG o DXF da AutoCAD. Senza questa il prototipo è collaudato solo su un esempio artificiale (punto 21).
+1. **Una planimetria reale in DXF.**
+   - Il 30/10/2026 Andrea ha caricato su `main` 3 DWG in formato AC1032 (AutoCAD 2018 o successivi): `03_BASICO_VIVIENDA MOYA OPCION 2-3.dwg` e i probabili riferimenti esterni `REF.OPCION 2.dwg`, `REF.OPCION 3.dwg`.
+   - Serve la loro esportazione in DXF da AutoCAD.
 2. **La prova del risultato in AutoCAD** (test 8).
 3. **Le caratteristiche dell'hosting** (sezione 6).
 4. ~~Database~~: **deciso, niente database dell'hosting**: dati su file (SQLite/JSON).
