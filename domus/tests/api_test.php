@@ -2,6 +2,9 @@
 // Test end-to-end dell'API di DOMUS. Si lancia con: bash tests/run.sh
 declare(strict_types=1);
 
+// Stesso fuso orario dell'app (config.php): altrimenti verso mezzanotte le date non coincidono.
+date_default_timezone_set('Europe/Rome');
+
 $base = rtrim($argv[1] ?? 'http://127.0.0.1:8765', '/');
 $jar = tempnam(sys_get_temp_dir(), 'domus');
 $csrf = '';
@@ -237,6 +240,50 @@ check('un PDF non può essere copertina', $s === 422);
 [$s] = call('PUT', "projects/$p2id/cover", ['file_id' => $imgId]);
 [$s, $p] = call('GET', "projects/$p2id");
 check('copertina scelta', $s === 200 && $p['cover_id'] === $imgId && $p['cover_file_id'] === $imgId);
+
+// planimetrie (area dedicata): file DXF con lo storico delle versioni
+function uploadVersion(int $planId, string $path, string $name, string $note, string $report): array
+{
+    global $base, $jar, $csrf;
+    $ch = curl_init("$base/api.php?r=plans/$planId/versions");
+    curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => ['file' => new CURLFile($path, '', $name), 'note' => $note, 'report' => $report],
+        CURLOPT_RETURNTRANSFER => true, CURLOPT_HTTPHEADER => ['X-Requested-With: domus', "X-CSRF-Token: $csrf"], CURLOPT_COOKIEJAR => $jar, CURLOPT_COOKIEFILE => $jar]);
+    $raw = (string) curl_exec($ch);
+    return [curl_getinfo($ch, CURLINFO_RESPONSE_CODE), json_decode($raw, true)];
+}
+file_put_contents("$tmp/pianta.dxf", "0\nSECTION\n2\nENTITIES\n0\nENDSEC\n0\nEOF\n");
+[$s, $r] = upload($p2id, [["$tmp/pianta.dxf", 'Pianta piano terra.dxf']], 'tavola');
+$dxfId = $r['ids'][0] ?? 0;
+[$s, $r] = call('POST', 'plans', ['project_id' => $p2id, 'title' => 'Pianta piano terra', 'kind' => 'pianta_quotata', 'file_id' => $fid]);
+check('planimetria: serve un DXF', $s === 422 && isset($r['fields']['file_id']), $r);
+[$s, $r] = call('POST', 'plans', ['project_id' => $p2id, 'title' => '', 'kind' => 'inventato', 'file_id' => $dxfId]);
+check('planimetria: titolo e tipo controllati', $s === 422 && isset($r['fields']['title'], $r['fields']['kind']), $r);
+[$s, $r] = call('POST', 'plans', ['project_id' => $p2id, 'title' => 'Pianta piano terra', 'kind' => 'stato_fatto', 'file_id' => $dxfId]);
+check('planimetria creata', $s === 200 && $r['id'] > 0, $r);
+$planId = $r['id'];
+[$s, $r] = uploadVersion($planId, "$tmp/pianta.pdf", 'pianta.pdf', 'no', '');
+check('versione: solo DXF', $s === 422, $r);
+[$s, $r] = uploadVersion($planId, "$tmp/pianta.dxf", 'Pianta piano terra v2.dxf', 'Ritocchi: 2 quote spostate', '{"superato":true}');
+check('nuova versione salvata', $s === 200 && $r['number'] === 2, $r);
+[$s, $pl] = call('GET', "plans/$planId");
+check('storico delle versioni', count($pl['versions']) === 2 && $pl['versions'][0]['number'] === 2 && $pl['versions'][0]['report']['superato'] === true && $pl['versions'][1]['note'] === 'Disegno di partenza', $pl);
+[$s, $list] = call('GET', "plans&project=$p2id");
+check('elenco planimetrie con ultima versione', count($list) === 1 && $list[0]['version'] === 2 && $list[0]['versions'] === 2 && $list[0]['code'] !== '', $list);
+[$s, $meta] = call('GET', 'meta');
+check('tipi di planimetria esecutiva', isset($meta['plan_kinds']['demolizioni_costruzioni'], $meta['plan_kinds']['impianto_elettrico']));
+[$s, $pl] = call('PUT', "plans/$planId", ['title' => 'Pianta PT quotata', 'kind' => 'pianta_quotata']);
+check('planimetria rinominata', $s === 200 && $pl['title'] === 'Pianta PT quotata' && $pl['kind'] === 'pianta_quotata', $pl);
+[$s, $p] = call('GET', "projects/$p2id");
+check('le versioni sono anche documenti del progetto', in_array('Pianta piano terra v2.dxf', array_column($p['files'], 'name'), true));
+[$s, $r] = call('PUT', 'settings', ['cad_profile' => '{"rotto"']);
+check('profilo CAD non valido rifiutato', $s === 422, $r);
+$profilo = json_encode(['layer_quote' => ['name' => '01Cotas 1'], 'stile_quote' => ['name' => '50'], 'scala' => 50]);
+[$s, $r] = call('PUT', 'settings', ['cad_profile' => $profilo]);
+check('profilo CAD dello studio salvato', $s === 200 && json_decode($r['cad_profile'], true)['layer_quote']['name'] === '01Cotas 1', $r);
+[$s] = call('DELETE', "plans/$planId");
+[$s, $list] = call('GET', "plans&project=$p2id");
+[$s2, $p] = call('GET', "projects/$p2id");
+check('planimetria eliminata, i file restano nei documenti', count($list) === 0 && in_array('Pianta piano terra v2.dxf', array_column($p['files'], 'name'), true));
 
 // pratiche
 [$s, $r] = call('POST', 'permits', ['project_id' => $p2id, 'kind' => 'CILA', 'status' => 'depositata', 'protocol' => '2026/1234', 'authority' => 'Comune di Bracciano']);

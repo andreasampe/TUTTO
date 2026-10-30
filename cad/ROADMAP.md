@@ -71,5 +71,20 @@ Architettura proposta:
 
   **Il motore funziona nel browser:** l'area Planimetrie può fare a meno di Python sul server.
 
+**Passo 2, area Planimetrie costruita (31/10/2026)**, nella webapp `domus/`:
+- voce di menu, scheda nel progetto, editor e profilo CAD in Impostazioni;
+- versioni salvate come documenti del progetto;
+- motore in `domus/assets/cad/` (`web/esporta_per_domus.py`);
+- funzioni `modifica.py` e `webapi.py`.
+
+Provato qui con la webapp vera (PHP, database, interfaccia) e il motore Python eseguito fuori dal browser, perché il CDN di Pyodide qui è bloccato:
+- creazione;
+- quotatura automatica (102 quote);
+- spostamento ed eliminazione di quote, modifica del cartiglio;
+- nuova versione con i controlli superati;
+- profilo ricavato dal `03_BASICO`.
+
+**Andrea:** provare in Local sul Mac, dove il motore si carica dal CDN.
+
 CADCraft (CAD completo nel browser) resta da rivalutare se un giorno servirà modificare il disegno vero. Oggi perde dati al salvataggio (vedi ANALISI_TECNICA.md).
 

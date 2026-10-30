@@ -553,11 +553,67 @@ a.hbar-label:hover { color: #fff; }
 .ical input { font-family: var(--mono); font-size: 11.5px !important; color: var(--ink-2); }
 
 /* ---------- schermi stretti ---------- */
+/* ---------- Planimetrie: elenco ed editor ---------- */
+.plans { display: grid; gap: 10px; }
+.plan-row { display: flex; align-items: center; gap: 16px; padding: 16px 18px; text-decoration: none; transition: border-color .15s, background .15s; }
+.plan-row:hover { border-color: var(--line-3); background: var(--surface-2); }
+.plan-ico { width: 44px; height: 44px; border: 1px solid var(--line-2); border-radius: 10px; display: grid; place-items: center; color: var(--ink-2); flex: none; }
+.plan-ver { display: grid; text-align: right; min-width: 74px; }
+.plan-ver b { font-weight: 300; font-size: 18px; }
+.plan-ver small { color: var(--ink-3); font-size: 11.5px; }
+
+.plan-editor { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; height: calc(100vh - 120px); min-height: 520px; }
+.plan-canvas { position: relative; border: 1px solid var(--line); border-radius: var(--radius); background: #0c0c0c; overflow: hidden;
+  background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 48px 48px; background-position: -1px -1px; }
+.plan-svg { width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; user-select: none; }
+.plan-svg:active { cursor: grabbing; }
+.plan-svg .geo { fill: none; stroke: var(--ink-3); stroke-width: 1; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.plan-svg .geo-pieno { fill: var(--ink-4); stroke: var(--ink-3); stroke-width: .6; vector-effect: non-scaling-stroke; }
+.plan-svg .t { fill: var(--ink-3); font-family: var(--font); }
+.plan-svg .t-mod { cursor: pointer; }
+.plan-svg .t-mod:hover, .plan-svg .t.sel { fill: var(--amber); }
+.plan-svg .q { cursor: pointer; }
+.plan-svg .q-linea { stroke: var(--ink-2); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+.plan-svg .q-presa { stroke: transparent; stroke-width: 14; vector-effect: non-scaling-stroke; }
+.plan-svg .q-punto { fill: var(--ink-2); }
+.plan-svg .q-testo { fill: var(--ink); font-family: var(--font); font-feature-settings: "tnum"; cursor: move; paint-order: stroke; stroke: #0c0c0c; stroke-linejoin: round; } /* il numero interrompe la linea, come in AutoCAD */
+.plan-svg .q.mod .q-linea { stroke: var(--green); }
+.plan-svg .q.mod .q-punto { fill: var(--green); }
+.plan-svg .q.mod .q-testo { fill: var(--green); }
+.plan-svg .q:hover .q-linea { stroke: var(--ink); }
+.plan-svg .q.sel .q-linea { stroke: var(--amber); stroke-width: 2; }
+.plan-svg .q.sel .q-punto, .plan-svg .q.sel .q-testo { fill: var(--amber); }
+.plan-overlay { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 14px; background: rgba(10, 10, 10, .72); color: var(--ink-2); font-size: 13px; text-align: center; padding: 20px; }
+.plan-overlay[hidden] { display: none; }
+.spinner { width: 28px; height: 28px; border: 1.5px solid var(--line-3); border-top-color: var(--ink); border-radius: 50%; animation: gira 1s linear infinite; }
+@keyframes gira { to { transform: rotate(360deg); } }
+.plan-zoom { position: absolute; right: 12px; bottom: 12px; display: grid; gap: 6px; }
+.plan-zoom .btn { background: rgba(16, 16, 16, .85); }
+.plan-panel { overflow-y: auto; display: grid; align-content: start; gap: 12px; padding-right: 2px; }
+.plan-head h2 { font-weight: 300; font-size: 24px; margin: 4px 0 2px; letter-spacing: -.02em; }
+.plan-head a { color: var(--ink-2); text-decoration: none; border-bottom: 1px solid var(--line-3); }
+.plan-engine { margin-top: 6px; }
+.plan-box { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 14px 16px; display: grid; gap: 10px; }
+.plan-box.muted { line-height: 1.55; }
+.plan-misura { font-size: 34px; font-weight: 200; font-feature-settings: "tnum"; line-height: 1; }
+.plan-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.plan-mods { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 13px; color: var(--ink-2); }
+.plan-mods li { display: flex; justify-content: space-between; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); padding: 3px 0; }
+.plan-versions { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.plan-versions li { display: flex; align-items: center; gap: 8px; border-radius: var(--radius-sm); padding: 2px 4px; }
+.plan-versions li.on { background: var(--surface-3); }
+.plan-v { flex: 1; min-width: 0; display: grid; grid-template-columns: auto 1fr; column-gap: 10px; text-align: left; background: none; border: 0; color: var(--ink); font: inherit; padding: 6px 2px; cursor: pointer; }
+.plan-v b { font-weight: 400; grid-row: span 2; align-self: center; }
+.plan-v span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.plan-v small { color: var(--ink-3); font-size: 11.5px; }
+
 @media (max-width: 1080px) {
   .grid-2 { grid-template-columns: 1fr; }
   .stats, .stats.five { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 860px) {
+  .plan-editor { grid-template-columns: 1fr; height: auto; }
+  .plan-canvas { height: 62vh; }
   .auth { grid-template-columns: 1fr; }
   .auth-visual { order: -1; height: 280px; }
   .auth-visual::after { background: linear-gradient(0deg, var(--bg), rgba(10, 10, 10, 0) 60%); }

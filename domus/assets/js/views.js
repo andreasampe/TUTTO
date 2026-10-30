@@ -267,6 +267,7 @@
     ['riepilogo', 'Riepilogo'],
     ['diario', 'Diario'],
     ['documenti', 'Documenti'],
+    ['planimetrie', 'Planimetrie'],
     ['pratiche', 'Pratiche'],
     ['economia', 'Economia', true],
     ['ore', 'Ore'],
@@ -416,6 +417,11 @@
               } }, D.icon('x', 14))),
             h('div', { class: 'entry-text' }, j.text))))
           : h('p', { class: 'muted small mt' }, 'Nessuna nota ancora.')));
+    },
+
+    // ----- Planimetrie (area dedicata: assets/js/planimetrie.js) -----
+    planimetrie(p, id) {
+      return D.planimetrieProgetto(p, id);
     },
 
     // ----- Documenti -----
@@ -852,6 +858,7 @@
           team)),
       h('div', {},
         card('Profilo', null, h('p', { class: 'item-meta', style: 'margin:-6px 0 14px' }, D.user.email), profile),
+        card('Profilo CAD dello studio', null, D.profiloCadCard(s)),
         card('Calendario sul Mac e sull\u2019iPhone', null,
           h('p', { class: 'small', style: 'margin:0 0 12px;color:var(--ink-2)' }, 'Abbonati a questo indirizzo dall\u2019app Calendario (Archivio → Nuovo abbonamento al calendario): scadenze, fasi, consegne, pratiche e rate si aggiornano da sole.'),
           icalBox()),

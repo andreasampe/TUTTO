@@ -68,6 +68,20 @@ Indicazioni sue, dal documento master:
   - Ha scelto **solo ritocchi** agli elaborati: quote, testi, cartiglio. Non un CAD completo.
   - Idea: il motore gira nel browser con Pyodide.
   - Prova di fattibilità `cad/web/prova_browser.html` **riuscita** sul Mac di Andrea: Chrome, 6,4 s, stesso risultato della riga di comando. Il motore gira nel browser. Piano in `cad/ROADMAP.md`.
+  - **Area costruita** (31/10/2026) nella webapp:
+    - menu *Planimetrie*;
+    - editor `#/planimetrie/<id>` con visualizzatore SVG; si trascinano linea e testo delle quote, si eliminano, si correggono testi e cartiglio;
+    - *Quota in automatico*;
+    - versioni come documenti del progetto;
+    - scheda nel progetto;
+    - *Profilo CAD dello studio* in Impostazioni (ricavato dal file di riferimento).
+  - File:
+    - `domus/src/Plans.php`, migrazione 4 (`plans`, `plan_versions`);
+    - `domus/assets/js/cad.js` (Pyodide da cdn.jsdelivr.net, consentito nella CSP con `wasm-unsafe-eval`);
+    - `domus/assets/js/planimetrie.js`;
+    - `domus/assets/cad/` (motore.json + ezdxf), da rigenerare con `python cad/web/esporta_per_domus.py` dopo ogni modifica al motore;
+    - lato motore `cad/domus_cad/modifica.py` e `webapi.py`.
+  - Da provare in Local sul Mac.
 - Flusso DWG scelto: AutoCAD *Salva con nome → DXF 2018*, poi elaborazione DOMUS, poi controllo in AutoCAD e salvataggio in DWG. CADCraft (MIT/Apache) è stato analizzato ma oggi è immaturo nel salvataggio: va rivalutato su file reali.
 - Decisioni di Andrea (30/10/2026):
   - **niente database dell'hosting**: dati su file (SQLite/JSON), anche se la specifica direbbe il contrario;
@@ -142,7 +156,7 @@ Webapp gestionale per lo studio di architettura (Chiara Pucci, architetto), nata
 
 ### Come provare
 
-- `bash domus/tests/run.sh` avvia il server PHP integrato su un database temporaneo ed esegue i test dell'API: `tests/api_test.php` (89 controlli) e `tests/demo_test.php` (16 controlli: studio dimostrativo, statistiche, galleria, iCal, preventivo), tutti verdi alla consegna.
+- `bash domus/tests/run.sh` avvia il server PHP integrato su un database temporaneo ed esegue i test dell'API: `tests/api_test.php` (102 controlli) e `tests/demo_test.php` (16 controlli: studio dimostrativo, statistiche, galleria, iCal, preventivo), tutti verdi. Unica eccezione: subito dopo la mezzanotte di Roma fallisce "scadenze superate", perché SQLite usa l'ora UTC. È un difetto noto, proposto come attività separata.
 - Schermate aggiornate in `domus/docs/schermate/` (20 immagini).
 - Per l'interfaccia: `php -S` su una cartella che contiene `domus/` (per simulare il percorso `/domus/` di Local) e Playwright (preinstallato nell'ambiente cloud).
 - In questo ambiente cloud **non si può avviare WordPress** (il codice esterno è bloccato) e **non c'è accesso ai siti esterni**.

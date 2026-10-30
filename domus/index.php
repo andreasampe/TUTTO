@@ -8,7 +8,9 @@ require __DIR__ . '/src/App.php';
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: same-origin');
-header("Content-Security-Policy: default-src 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'");
+// Area Planimetrie: il motore CAD (Python) gira nel browser con Pyodide, caricato da cdn.jsdelivr.net;
+// 'wasm-unsafe-eval' permette solo WebAssembly, non eval() né script inline.
+header("Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; font-src 'self'; style-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'wasm-unsafe-eval'; connect-src 'self' https://cdn.jsdelivr.net; frame-ancestors 'none'");
 
 $v = static fn (string $f): string => $f . '?v=' . filemtime(__DIR__ . '/' . $f);
 $name = htmlspecialchars((string) \Domus\App::config('app_name'), ENT_QUOTES);
@@ -32,5 +34,7 @@ $name = htmlspecialchars((string) \Domus\App::config('app_name'), ENT_QUOTES);
   <script src="<?= $v('assets/js/icons.js') ?>"></script>
   <script src="<?= $v('assets/js/views.js') ?>"></script>
   <script src="<?= $v('assets/js/screens.js') ?>"></script>
+  <script src="<?= $v('assets/js/cad.js') ?>"></script>
+  <script src="<?= $v('assets/js/planimetrie.js') ?>"></script>
 </body>
 </html>

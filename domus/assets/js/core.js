@@ -216,7 +216,7 @@ D.modal = function (title, body) {
 D.confirm = (msg) => window.confirm(msg);
 
 // ---------- router ----------
-// Indirizzi: #/  #/progetti  #/progetti/12  #/clienti  #/clienti/3  #/scadenze  #/impostazioni
+// Indirizzi: #/  #/progetti  #/progetti/12  #/planimetrie  #/planimetrie/4  #/clienti  #/clienti/3  #/scadenze  #/impostazioni
 
 D.routes = [];
 D.route = (pattern, view) => D.routes.push({ re: new RegExp(`^${pattern}$`), view });
@@ -266,6 +266,7 @@ D.layout = function (meta, page) {
       D.h('nav', { class: 'nav', onclick: () => document.body.classList.remove('nav-open') },
         navLink('/', 'Panoramica', 'home', 'home'),
         navLink('/progetti', 'Progetti', 'progetti', 'projects'),
+        navLink('/planimetrie', 'Planimetrie', 'planimetrie', 'layers'),
         navLink('/bacheca', 'Bacheca', 'bacheca', 'board'),
         navLink('/clienti', 'Clienti', 'clienti', 'clients'),
         navLink('/scadenze', 'Scadenze', 'scadenze', 'tasks', D.overdue),

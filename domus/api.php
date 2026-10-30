@@ -77,6 +77,7 @@ try {
         $resource === 'meta' && $method === 'GET' => [
             'permit_kinds' => Permits::KINDS,
             'file_categories' => Files::CATEGORIES,
+            'plan_kinds' => Plans::KINDS,
         ],
 
         // clienti
@@ -116,6 +117,14 @@ try {
         $resource === 'files' && $id !== null && $method === 'GET' => Files::send($id, ($_GET['inline'] ?? '') === '1'),
         $resource === 'files' && $id !== null && $method === 'PUT' => $ok(fn () => Files::update($id, $in)),
         $resource === 'files' && $id !== null && $method === 'DELETE' => $ok(fn () => Files::delete($id)),
+
+        // planimetrie (area dedicata): ritocchi e quotatura avvengono nel browser, qui i file e le versioni
+        $resource === 'plans' && $id === null && $method === 'GET' => Plans::list(isset($_GET['project']) ? (int) $_GET['project'] : null, $q),
+        $resource === 'plans' && $id === null && $method === 'POST' => ['id' => Plans::create($user, $in)],
+        $resource === 'plans' && $id !== null && $sub === 'versions' && $method === 'POST' => Plans::addVersion($user, $id, $_FILES, (string) ($_POST['note'] ?? ''), (string) ($_POST['report'] ?? '')),
+        $resource === 'plans' && $id !== null && $sub === null && $method === 'GET' => Plans::get($id),
+        $resource === 'plans' && $id !== null && $sub === null && $method === 'PUT' => (function () use ($id, $in) { Plans::update($id, $in); return Plans::get($id); })(),
+        $resource === 'plans' && $id !== null && $sub === null && $method === 'DELETE' => $ok(fn () => Plans::delete($id)),
 
         // pratiche edilizie
         $resource === 'permits' && $id === null && $method === 'POST' => ['id' => Permits::create($in)],

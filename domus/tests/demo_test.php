@@ -2,6 +2,9 @@
 // Test dei dati dimostrativi, delle statistiche, della galleria e del calendario iCal (archivio vuoto).
 declare(strict_types=1);
 
+// Stesso fuso orario dell'app (config.php): altrimenti verso mezzanotte le date non coincidono.
+date_default_timezone_set('Europe/Rome');
+
 $base = rtrim($argv[1] ?? 'http://127.0.0.1:8766', '/');
 $jar = tempnam(sys_get_temp_dir(), 'domus');
 $csrf = '';

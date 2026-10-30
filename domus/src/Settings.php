@@ -8,6 +8,7 @@ final class Settings
 {
     private const DEFAULTS = [
         'studio_name' => '',
+        'cad_profile' => '',
         // Fasi proposte per ogni nuovo progetto, una per riga. Modificabili da Impostazioni.
         'default_phases' => "Sopralluogo e rilievo\nStudio di fattibilità\nProgetto preliminare\nProgetto definitivo\nPratica edilizia\nProgetto esecutivo\nDirezione lavori\nFine lavori e agibilità",
     ];
@@ -41,6 +42,15 @@ final class Settings
     {
         if (array_key_exists('studio_name', $in)) {
             self::set('studio_name', Validate::text($in['studio_name'], 120));
+        }
+        // Profilo CAD dello studio, ricavato nel browser dal suo file di riferimento (cad/domus_cad/profilo.py).
+        if (array_key_exists('cad_profile', $in)) {
+            $json = (string) $in['cad_profile'];
+            $p = json_decode($json, true);
+            if ($json !== '' && (strlen($json) > 200000 || !is_array($p) || !isset($p['layer_quote']['name'], $p['stile_quote']['name']))) {
+                throw new HttpError(422, 'Profilo CAD non valido');
+            }
+            self::set('cad_profile', $json);
         }
         if (array_key_exists('default_phases', $in)) {
             $lines = array_values(array_filter(array_map(

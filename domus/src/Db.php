@@ -168,6 +168,34 @@ final class Db
         3 => <<<'SQL'
             ALTER TABLE projects ADD COLUMN cover_file_id INTEGER;
             SQL,
+
+        // Area "Planimetrie": planimetrie esecutive in DXF con lo storico delle versioni.
+        // Ogni versione è un file dei Documenti del progetto (categoria "tavola").
+        4 => <<<'SQL'
+            CREATE TABLE plans (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                title      TEXT NOT NULL,
+                kind       TEXT NOT NULL DEFAULT 'pianta_quotata',
+                notes      TEXT,
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+
+            CREATE TABLE plan_versions (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                plan_id    INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+                file_id    INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+                number     INTEGER NOT NULL,
+                note       TEXT,
+                report     TEXT,
+                user_id    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+
+            CREATE INDEX idx_plans_project       ON plans(project_id);
+            CREATE INDEX idx_plan_versions_plan  ON plan_versions(plan_id, number);
+            SQL,
     ];
 
     public static function pdo(): PDO

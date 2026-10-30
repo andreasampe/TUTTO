@@ -235,6 +235,9 @@ def applica(doc: Drawing, profilo: dict) -> tuple[str, str, dict]:
             nuovo.set_xdata("ACAD", [tuple(t) for t in st["xdata_acad"]])
     if sq["name"] not in doc.dimstyles:
         attr = {k: v for k, v in sq.items() if k != "name" and not k.startswith("dimblk") and k != "dimldrblk"}
+        # ezdxf scriverebbe i suoi valori predefiniti (ISO: virgola, zeri tolti) per gli attributi
+        # assenti: si mettono quelli di AutoCAD, che sono quelli con cui lo studio vede lo stile
+        attr = {**{k: v for k, v in PREDEFINITI_AUTOCAD.items() if k not in attr}, **attr}
         nuovo = doc.dimstyles.new(sq["name"], dxfattribs=attr)
         frecce = {k: (sq.get(k) or "").lstrip("_") for k in ("dimblk", "dimblk1", "dimblk2", "dimldrblk")}
         nuovo.set_arrows(blk=frecce["dimblk"], blk1=frecce["dimblk1"], blk2=frecce["dimblk2"], ldrblk=frecce["dimldrblk"])
@@ -249,6 +252,19 @@ PREDEFINITI_AUTOCAD = {
     "dimtmove": 0, "dimjust": 0, "dimtvp": 0, "dimtix": 0, "dimsoxd": 0, "dimlfac": 1.0,
     "dimtfac": 1.0, "dimtsz": 0.0, "dimlunit": 2, "dimsah": 0, "dimclrd": 0, "dimclre": 0, "dimclrt": 0,
 }
+
+
+def valori_resa(ds) -> dict:
+    """Valori con cui disegnare le quote di uno stile come le disegna AutoCAD.
+
+    - gli attributi assenti dallo stile prendono i predefiniti di AutoCAD;
+    - DIMRND = 0 per AutoCAD vuol dire "nessun arrotondamento", mentre ezdxf arrotonderebbe
+      all'intero (6.40 diventerebbe 6.00): per il disegno si toglie.
+    """
+    resa = {k: v for k, v in PREDEFINITI_AUTOCAD.items() if ds is None or not ds.dxf.hasattr(k)}
+    if ds is None or not ds.dxf.get("dimrnd", 0):
+        resa["dimrnd"] = 1e-9  # in pratica nessun arrotondamento (poi tolto dalla quota)
+    return resa
 
 
 def misura_testo(doc: Drawing, stile: str, override: dict) -> dict:
@@ -280,8 +296,7 @@ def aggiungi_quota(doc: Drawing, base, p1, p2, angolo: float, layer: str, stile:
     u = (math.cos(math.radians(angolo)), math.sin(math.radians(angolo)))
     if (p2[0] - p1[0]) * u[0] + (p2[1] - p1[1]) * u[1] < 0:
         p1, p2 = p2, p1
-    ds = doc.dimstyles.get(stile)
-    resa = {k: v for k, v in PREDEFINITI_AUTOCAD.items() if not ds.dxf.hasattr(k)}
+    resa = valori_resa(doc.dimstyles.get(stile))
     dim = doc.modelspace().add_linear_dim(base=base, p1=p1, p2=p2, angle=angolo, dimstyle=stile, location=testo_in,
                                           override={**resa, **override}, dxfattribs={"layer": layer})
     dim.render()

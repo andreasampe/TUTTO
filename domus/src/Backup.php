@@ -6,7 +6,7 @@ namespace Domus;
 
 final class Backup
 {
-    private const TABLES = ['clients', 'projects', 'phases', 'tasks', 'journal', 'permits', 'payments', 'hours', 'files', 'settings'];
+    private const TABLES = ['clients', 'projects', 'phases', 'tasks', 'journal', 'permits', 'payments', 'hours', 'files', 'plans', 'plan_versions', 'settings'];
 
     /** @return array<string,mixed> */
     public static function export(): array
