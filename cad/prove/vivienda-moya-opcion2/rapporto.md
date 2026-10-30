@@ -17,9 +17,9 @@
 | 1 | Lettura | ok | 583 entità originali lette |
 | 2 | Conservazione | ok | tutte le entità originali presenti e invariate |
 | 3 | Layer | ok | presenti: 01Cotas 1, DOMUS_CARTIGLIO, DOMUS_NOTE |
-| 4 | Quote | ok | 78 quote, misure uguali alla geometria (tolleranza 1e-6), testo = misura × 1 |
+| 4 | Quote | ok | 104 quote, misure uguali alla geometria (tolleranza 1e-6), testo = misura × 1 |
 | 5 | Cartiglio | ok | blocco DOMUS_CARTIGLIO con attributi, in basso a destra fuori dal disegno |
-| 6 | Esportazione | ok | elaborato.dxf, 731048 byte, DXF AC1032 |
+| 6 | Esportazione | ok | elaborato.dxf, 780181 byte, DXF AC1032 |
 | 7 | Riapertura | ok | riaperto con ezdxf, audit: 0 errori, 0 correzioni |
 | 8 | Compatibilità AutoCAD | da verificare | da aprire in AutoCAD sul Mac: in questo ambiente AutoCAD non c'è |
 | 9 | Integrità dell'originale | ok | SHA-256 del file originale invariato |
@@ -34,10 +34,11 @@
 - Letto DXF AC1032: 583 entità, 13 layer
 - Quote sul layer '01Cotas 1' con lo stile '50' del profilo e le modifiche {'dimscale': 1.0}
 - Generate 28 quote esterne (catene parziali e totali sui 4 lati), muri: 01Seccionado albanileria, 01Seccionado albañilería, 01Trama solido
-- Generate 50 quote interne: luci tra muri (minimo 0.5 m) e distanze degli arredi (minimo 0.3 m)
+- Generate 76 quote interne: luci tra muri (minimo 0.5 m) e distanze degli arredi (minimo 0.3 m)
 - Limiti: 01Visto · arredi: 01Mobiliario · porte e finestre: 01Seccionado carpintería
+- Testi spostati per non toccarsi: 11 su 104
 - Inseriti cartiglio (blocco con attributi) e nota sul layer DOMUS_NOTE
-- Salvato elaborato.dxf (731048 byte)
+- Salvato elaborato.dxf (780181 byte)
 - Creata anteprima.svg
 
 ## Comando usato
@@ -52,8 +53,9 @@ Layer, stile e scala vengono dal profilo `profili/studio.json`, ricavato in auto
 ## Confronto con le quote dello studio (layer `01Cotas 1` di `03_BASICO`)
 
 - Stesso layer (`01Cotas 1`), stesso stile (`50`), stessa modifica per quota (DIMSCALE 1): lo stile del file non viene toccato.
-- Quote uguali al riferimento: 7.20, 4.00, 3.50, 2.20, 1.60, 1.50, 1.40, 1.30, 1.00, 0.90 (tavolo-cucina), 0.80.
+- Quote uguali al riferimento: 7.20, 4.00, 3.50, 2.20, 1.60, 1.50, 1.40, 1.30, 1.00, 0.90 (tavolo-cucina), 0.80, e le misure del tavolo 1.50 e 0.80.
 - Differenze ancora visibili:
   - nel giardino in basso compaiono quote muro-recinzione (2.85) che lo studio non mette;
-  - mancano alcune misure degli arredi presenti nel riferimento (larghezza del tavolo 0.80, divano 0.40), perché le misure interne a un singolo arredo vengono scartate di proposito;
-  - alcune quote vicine hanno i testi accostati.
+  - qualche testo spostato resta vicino a linee del disegno (si evitano solo gli altri testi).
+- Misure dentro gli arredi: una sola quota per misura e per locale (moduli della cucina 0.60, tavolo 1.50 x 0.80, divano 0.40).
+- Testi: se si toccherebbero, il testo si sposta sopra/sotto la linea o lungo la linea (11 su 104).

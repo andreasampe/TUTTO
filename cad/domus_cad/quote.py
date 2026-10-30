@@ -78,25 +78,30 @@ def calcola(punti: list[Vec2], fascia: float, tolleranza: float) -> list[Quota]:
     return quote
 
 
-def disegna(doc: Drawing, quote: list[Quota], passo: float,
-            ingombro: tuple[tuple[float, float], tuple[float, float]],
-            layer: str, stile: str, override: dict | None = None) -> list[str]:
-    """Aggiunge le quote fuori dal disegno; restituisce gli handle creati.
+def basi(quote: list[Quota], passo: float,
+         ingombro: tuple[tuple[float, float], tuple[float, float]]) -> list[tuple[tuple[float, float], float]]:
+    """Punto di passaggio e direzione della linea di ogni quota esterna.
 
-    Le linee di quota partono oltre l'ingombro di TUTTO il disegno (testi compresi),
+    Le linee di quota stanno oltre l'ingombro di TUTTO il disegno (testi compresi),
     così non si sovrappongono a geometrie o scritte esistenti.
     """
     (xmin, ymin), (xmax, ymax) = ingombro
-    handles: list[str] = []
+    out = []
     for q in quote:
         distanza = passo * q.livello
         if q.lato == "basso":
-            base, angolo = (q.p1[0], min(ymin, q.p1[1]) - distanza), 0
+            out.append(((q.p1[0], min(ymin, q.p1[1]) - distanza), 0))
         elif q.lato == "alto":
-            base, angolo = (q.p1[0], max(ymax, q.p1[1]) + distanza), 0
+            out.append(((q.p1[0], max(ymax, q.p1[1]) + distanza), 0))
         elif q.lato == "sinistra":
-            base, angolo = (min(xmin, q.p1[0]) - distanza, q.p1[1]), 90
+            out.append(((min(xmin, q.p1[0]) - distanza, q.p1[1]), 90))
         else:
-            base, angolo = (max(xmax, q.p1[0]) + distanza, q.p1[1]), 90
-        handles.append(aggiungi_quota(doc, base, q.p1, q.p2, angolo, layer, stile, override or {}))
-    return handles
+            out.append(((max(xmax, q.p1[0]) + distanza, q.p1[1]), 90))
+    return out
+
+
+def disegna(doc: Drawing, quote: list[Quota], basi_quote: list, posizioni: list, layer: str, stile: str,
+            override: dict | None = None) -> list[str]:
+    """Aggiunge le quote; restituisce gli handle creati."""
+    return [aggiungi_quota(doc, base, q.p1, q.p2, angolo, layer, stile, override or {}, testo_in=pos)
+            for q, (base, angolo), pos in zip(quote, basi_quote, posizioni)]

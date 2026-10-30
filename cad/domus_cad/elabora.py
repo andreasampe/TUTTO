@@ -17,7 +17,7 @@ import ezdxf
 import numpy as np
 from ezdxf import recover
 
-from . import cartiglio, interne, lettura, profilo as profili, quote
+from . import cartiglio, interne, lettura, profilo as profili, quote, testi
 
 
 def impronta(percorso: Path) -> str:
@@ -102,8 +102,6 @@ def elabora(origine: str, uscita: str, *, unita: str | None = None, scala: int |
                + (f" e le modifiche {override}" if override else ""))
     punti = quote.vertici(doc, layer_muri)
     esterne = quote.calcola(punti, fascia=0.6 / m_per_u, tolleranza=0.005 / m_per_u)
-    h_quote = quote.disegna(doc, esterne, passo=8 * u_per_mm, ingombro=rapporto.estensione,
-                            layer=layer_quote, stile=stile, override=override)
     log.append(f"Generate {len(esterne)} quote esterne (catene parziali e totali sui 4 lati), muri: {', '.join(sorted(layer_muri or ['tutti i layer']))}")
     previste = list(esterne)
     if quote_interne:
@@ -120,11 +118,25 @@ def elabora(origine: str, uscita: str, *, unita: str | None = None, scala: int |
         oggetti = layer_arredi | layer_limiti
         luci = interne.calcola(tutti, mappa, m_per_u, arredo=arredo, luce_minima=luce_minima, luce_arredi=luce_arredi,
                               ingombri_arredi=interne.ingombri(doc, oggetti, m_per_u) if oggetti else None)
-        h_quote += interne.disegna(doc, luci, layer_quote, stile, override)
         previste += luci
         log.append(f"Generate {len(luci)} quote interne: luci tra muri (minimo {luce_minima:g} m) e distanze degli arredi (minimo {luce_arredi:g} m)")
         log.append(f"Limiti: {', '.join(sorted(layer_limiti)) or 'nessuno'} · arredi: {', '.join(sorted(layer_arredi)) or 'nessuno'}"
                    f" · porte e finestre: {', '.join(sorted(aperture)) or 'nessuno'}")
+    else:
+        luci = []
+
+    # testi che non si toccano: dove serve, il testo si sposta (la misura no)
+    basi_est = quote.basi(esterne, passo=8 * u_per_mm, ingombro=rapporto.estensione)
+    t = profili.misura_testo(doc, stile, override)
+    elenco = [{"base": b, "p1": q.p1, "p2": q.p2, "angolo": a, "testo": testi.testo(q.misura, t["fattore"], t["decimali"])}
+              for q, (b, a) in zip(esterne, basi_est)] + \
+             [{"base": interne._centro(q), "p1": q.p1, "p2": q.p2, "angolo": q.angolo,
+               "testo": testi.testo(q.misura, t["fattore"], t["decimali"])} for q in luci]
+    posizioni = testi.disponi(elenco, t["altezza"], t["orizzontale"], t["larghezza"])
+    h_quote = quote.disegna(doc, esterne, basi_est, posizioni[:len(esterne)], layer_quote, stile, override)
+    h_quote += interne.disegna(doc, luci, posizioni[len(esterne):], layer_quote, stile, override)
+    spostati = sum(p is not None for p in posizioni)
+    log.append(f"Testi spostati per non toccarsi: {spostati} su {len(posizioni)}")
 
     # 9-10. annotazioni e cartiglio
     ext = rapporto.estensione

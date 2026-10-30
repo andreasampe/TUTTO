@@ -96,6 +96,22 @@ class Prototipo(unittest.TestCase):
         self.assertIn(1.20, misure)   # tavolo - muro a sinistra
         self.assertIn(0.70, misure)   # tavolo - muro in basso
 
+    def test_moduli_uguali_quotati_una_volta(self):
+        esito = self.elabora()
+        da_60 = [q for q in esito["quote"] if q["lato"] == "interno" and round(q["misura"], 2) == 0.60]
+        direzioni = sorted(round(q["angolo"]) % 180 for q in da_60)
+        self.assertEqual(direzioni, [0, 90])   # tre moduli 60 x 60: una larghezza e una profondità
+
+    def test_testi_che_si_toccherebbero_vengono_spostati(self):
+        from domus_cad import testi
+        # due quote parallele vicinissime: i testi al centro si sovrapporrebbero
+        quote = [{"base": (0, 0), "p1": (0, 0), "p2": (2, 0), "angolo": 0, "testo": "2.00"},
+                 {"base": (0, 0.05), "p1": (0, 0.05), "p2": (1.9, 0.05), "angolo": 0, "testo": "1.90"}]
+        pos = testi.disponi(quote, altezza=0.1, orizzontale=True)
+        self.assertIsNone(pos[0])        # la più lunga resta al centro
+        self.assertIsNotNone(pos[1])     # l'altra si sposta
+        self.assertGreater(abs(pos[1][0] - 0.95) + abs(pos[1][1] - 0.05), 0.1)
+
     def test_profilo_riconosciuto_in_automatico(self):
         rif = ezdxf.new("R2018", setup=True)
         rif.header["$INSUNITS"] = 6

@@ -251,16 +251,31 @@ PREDEFINITI_AUTOCAD = {
 }
 
 
-def aggiungi_quota(doc: Drawing, base, p1, p2, angolo: float, layer: str, stile: str, override: dict) -> str:
+def misura_testo(doc: Drawing, stile: str, override: dict) -> dict:
+    """Altezza, larghezza, fattore, decimali e orientamento del testo delle quote, come li vede AutoCAD."""
+    ds = doc.dimstyles.get(stile)
+    def valore(k, predefinito):
+        return override.get(k, ds.dxf.get(k, PREDEFINITI_AUTOCAD.get(k, predefinito)))
+    scala = valore("dimscale", 1.0) or 1.0  # 0 = 1 nello spazio modello
+    larghezza = 1.0
+    if (nome := ds.dxf.get("dimtxsty")) and nome in doc.styles:
+        larghezza = doc.styles.get(nome).dxf.get("width", 1.0) or 1.0
+    return {"altezza": valore("dimtxt", 2.5) * scala, "larghezza": larghezza, "fattore": valore("dimlfac", 1.0),
+            "decimali": int(valore("dimdec", 2)), "orizzontale": bool(valore("dimtih", 1))}
+
+
+def aggiungi_quota(doc: Drawing, base, p1, p2, angolo: float, layer: str, stile: str, override: dict,
+                   testo_in=None) -> str:
     """Quota lineare con layer e stile dello studio; restituisce l'handle.
 
     La grafica della quota viene generata con i valori che AutoCAD userebbe per lo stile
     (1.50 con il punto, testo orizzontale…). Nella quota resta scritta solo la modifica
     del profilo (es. DIMSCALE 1), come nelle quote disegnate dallo studio.
+    `testo_in`: posizione del testo quando non può stare al centro (vedi `testi.py`).
     """
     ds = doc.dimstyles.get(stile)
     resa = {k: v for k, v in PREDEFINITI_AUTOCAD.items() if not ds.dxf.hasattr(k)}
-    dim = doc.modelspace().add_linear_dim(base=base, p1=p1, p2=p2, angle=angolo, dimstyle=stile,
+    dim = doc.modelspace().add_linear_dim(base=base, p1=p1, p2=p2, angle=angolo, dimstyle=stile, location=testo_in,
                                           override={**resa, **override}, dxfattribs={"layer": layer})
     dim.render()
     if override:

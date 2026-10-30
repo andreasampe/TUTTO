@@ -11,6 +11,7 @@
    │                 riconosciuti in automatico dal file di riferimento
    ├─ quote.py       catene di quote esterne                          (punto 8.1)
    ├─ interne.py     luci interne e distanze degli arredi             (punto 8.1)
+   ├─ testi.py       posizione dei testi: niente testi che si toccano
    ├─ cartiglio.py   cartiglio a blocco con attributi, note            (punto 8.1)
    └─ elabora.py     flusso completo, verifiche, anteprima, rapporto   (punti 14-15)
             │ usa

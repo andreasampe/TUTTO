@@ -39,7 +39,10 @@ python3 -m venv .venv
 Cosa viene quotato:
 - **catene esterne** sui muri perimetrali, più le quote totali;
 - **luci interne** da muro a muro in ogni locale, comprese le zone aperte come il garage, quotate così come sono disegnate;
-- **distanze degli arredi** dai muri e tra loro. Non si quotano le misure dentro un singolo arredo (moduli della cucina, ripiani).
+- **distanze degli arredi** dai muri e tra loro;
+- **misure degli arredi** (tavolo, modulo della cucina): **una sola quota** per misura e per locale, quindi moduli uguali da 60×60 hanno una quota sola.
+
+Se due testi si toccherebbero, uno si sposta sopra o sotto la linea, oppure lungo la linea, anche fuori dalle estremità. La misura non cambia.
 
 Le quote vanno **sul layer e con lo stile dello studio**:
 - se il disegno li contiene già, vengono usati così come sono, senza modificarli;

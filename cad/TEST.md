@@ -6,7 +6,7 @@
 python3 -m unittest discover -s tests
 ```
 
-17 test, tutti superati il 30/10/2026 (Python 3.13, ezdxf 1.4.2). Usano `esempi/esempio_artificiale.dxf`, un appartamento **inventato** di 12 × 9 m in metri: **non sono una prova su file reali**.
+19 test, tutti superati il 30/10/2026 (Python 3.13, ezdxf 1.4.2). Usano `esempi/esempio_artificiale.dxf`, un appartamento **inventato** di 12 × 9 m in metri: **non sono una prova su file reali**.
 
 | Test | Cosa verifica |
 |---|---|
@@ -18,6 +18,8 @@ python3 -m unittest discover -s tests
 | distanze degli arredi | tavolo dell'esempio a 1,20 e 0,70 dai muri |
 | profilo automatico | da un riferimento con layer `A-ANNO-DIMS` e stile `ARCH 100` riconosce layer, stile, scala 1:100 e ruoli |
 | ruoli dalla geometria | con layer chiamati L1 e L2 riconosce muri e arredi dalla geometria |
+| moduli uguali | tre moduli da 60×60: una sola quota di larghezza e una di profondità |
+| testi spostati | due quote vicinissime: la più lunga tiene il testo al centro, l'altra lo sposta |
 | quote interne | luci nette 4,90 / 4,20 / 4,10 dei locali; niente spessori di muro; nessuna quota attraversa il tramezzo |
 | senza quote interne | l'opzione le disattiva |
 | originale intatto | SHA-256 dell'originale e della sua copia invariati |
@@ -75,6 +77,7 @@ Andrea sulla seconda versione:
   - 0.90 tra tavolo e cucina;
   - il garage è quotato (3.33);
 - test 1-7, 9 e 11 **ok**; test 8 **da verificare** in AutoCAD;
+- Andrea: moduli uguali con una sola quota, testi spostati se si toccano. Fatto: 76 quote interne, 11 testi spostati su 104;
 - **problema tecnico risolto:** nel DXF AutoCAD non scrive i valori predefiniti dello stile (separatore decimale, zeri, testo orizzontale) ed ezdxf li sostituiva con quelli ISO ("0,6" invece di "0.60"). Ora la grafica della quota usa i predefiniti di AutoCAD, senza modificare lo stile.
 
 **Errore trovato grazie al file reale e corretto:** il controllo di conservazione falliva sui CERCHI, che nell'esempio artificiale non c'erano. Ora l'esempio contiene un pilastro circolare e il test lo copre.

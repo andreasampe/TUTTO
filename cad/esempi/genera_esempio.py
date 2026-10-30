@@ -29,6 +29,9 @@ def genera(percorso: Path) -> Path:
     msp.add_circle((8.0, 2.5), 0.15, dxfattribs={"layer": "MURI"})  # pilastro circolare
     # tavolo nel soggiorno: 1,20 dal muro a sinistra, 0,70 da quello in basso
     msp.add_lwpolyline([(1.5, 1.0), (3.0, 1.0), (3.0, 1.8), (1.5, 1.8)], close=True, dxfattribs={"layer": "ARREDI"})
+    # tre moduli della cucina da 60 x 60 contro il muro in basso
+    for x in (9.0, 9.6, 10.2):
+        msp.add_lwpolyline([(x, 0.3), (x + 0.6, 0.3), (x + 0.6, 0.9), (x, 0.9)], close=True, dxfattribs={"layer": "ARREDI"})
     msp.add_arc((4.2, 4.55), 0.8, 0, 90, dxfattribs={"layer": "PORTE"})
     msp.add_arc((5.25, 3.6), 0.8, 90, 180, dxfattribs={"layer": "PORTE"})
     for testo, x, y in (("SOGGIORNO", 1.5, 2.2), ("CAMERA", 1.5, 6.5), ("CUCINA", 7.5, 2.2), ("BAGNO", 6.6, 6.5)):

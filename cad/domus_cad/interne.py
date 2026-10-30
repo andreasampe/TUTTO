@@ -256,8 +256,9 @@ def calcola(seg_muri: np.ndarray, mappa: Mappa | None, m_per_u: float, *, arredo
     """Luci nette e distanze degli arredi, in unità di disegno. I parametri sono in metri.
 
     `arredo[i]` è vero se il segmento i è un arredo: le misure che lo toccano hanno
-    come minimo `luce_arredi` invece di `luce_minima`, e non devono stare dentro
-    l'ingombro di un arredo (moduli della cucina, ripiani, gradini non si quotano)."""
+    come minimo `luce_arredi` invece di `luce_minima`.
+    Le misure DENTRO un arredo (un modulo della cucina, il tavolo, un ripiano) si quotano
+    una volta sola per locale: moduli uguali, per esempio 60x60, hanno una sola quota."""
     if len(seg_muri) == 0:
         return []
     passo_u, minima_u, tratto_u = passo / m_per_u, luce_minima / m_per_u, tratto_minimo / m_per_u
@@ -308,13 +309,12 @@ def calcola(seg_muri: np.ndarray, mappa: Mappa | None, m_per_u: float, *, arredo
         p = origini[m]
         q = p + direzioni[m] * d
         p, q = (float(p[0]), float(p[1])), (float(q[0]), float(q[1]))
+        dentro = False
         if arredo[i] or arredo[j]:
             cx, cy, eps = (p[0] + q[0]) / 2, (p[1] + q[1]) / 2, 0.01 / m_per_u
-            if mappa is not None and mappa.in_oggetto(cx, cy):
-                continue
             g = ingombri_arredi
-            if g is not None and len(g) and np.any((g[:, 0] + eps < cx) & (cx < g[:, 2] - eps) & (g[:, 1] + eps < cy) & (cy < g[:, 3] - eps)):
-                continue
+            dentro = (mappa is not None and mappa.in_oggetto(cx, cy)) or bool(
+                g is not None and len(g) and np.any((g[:, 0] + eps < cx) & (cx < g[:, 2] - eps) & (g[:, 1] + eps < cy) & (cy < g[:, 3] - eps)))
         locale = mappa.locale(p, q) if mappa is not None else -1
         if locale is None:
             continue
@@ -323,7 +323,7 @@ def calcola(seg_muri: np.ndarray, mappa: Mappa | None, m_per_u: float, *, arredo
             angolo -= 180
         # punteggio: tratto lungo, e a parità meglio una quota orizzontale o verticale
         punteggio = lunghezza_tratto * (1.2 if min(angolo % 90, 90 - angolo % 90) < 0.5 else 1.0)
-        candidati.append((punteggio, locale, _linea(seg_muri[i]), _linea(seg_muri[j]), Quota("interno", 0, p, q, round(d, 9), angolo), minimo))
+        candidati.append((punteggio, locale, _linea(seg_muri[i]), _linea(seg_muri[j]), Quota("interno", 0, p, q, round(d, 9), angolo), minimo, dentro))
 
     # lo spazio attraversato deve essere largo almeno la luce minima anche di traverso:
     # altrimenti la quota corre dentro un muro disegnato a due linee
@@ -336,7 +336,13 @@ def calcola(seg_muri: np.ndarray, mappa: Mappa | None, m_per_u: float, *, arredo
 
     # stessa coppia di linee di muro nello stesso locale = una sola quota (la più rappresentativa)
     scelte: list[tuple] = []
+    moduli: set[tuple] = set()  # misure dentro gli arredi già quotate: (misura, direzione, locale)
     for c in sorted(candidati, key=lambda c: -c[0]):
+        if c[6]:
+            modulo = (round(c[4].misura * m_per_u, 2), round(c[4].angolo) % 180, c[1])
+            if modulo in moduli:
+                continue
+            moduli.add(modulo)
         if not any(c[1] == s[1] and _stessa_coppia(c[2:4], s[2:4], 0.02 / m_per_u)
                    and (c[1] >= 0 or math.dist(_centro(c[4]), _centro(s[4])) < 1.5 / m_per_u) for s in scelte):
             scelte.append(c)
@@ -365,10 +371,8 @@ def _centro(q: Quota) -> tuple[float, float]:
     return (q.p1[0] + q.p2[0]) / 2, (q.p1[1] + q.p2[1]) / 2
 
 
-def disegna(doc: Drawing, quote: list[Quota], layer: str, stile: str, override: dict | None = None) -> list[str]:
+def disegna(doc: Drawing, quote: list[Quota], posizioni: list, layer: str, stile: str,
+            override: dict | None = None) -> list[str]:
     """Quote interne con la linea che attraversa il locale, come nei disegni dello studio."""
-    handles: list[str] = []
-    for q in quote:
-        base = ((q.p1[0] + q.p2[0]) / 2, (q.p1[1] + q.p2[1]) / 2)
-        handles.append(aggiungi_quota(doc, base, q.p1, q.p2, q.angolo, layer, stile, override or {}))
-    return handles
+    return [aggiungi_quota(doc, _centro(q), q.p1, q.p2, q.angolo, layer, stile, override or {}, testo_in=pos)
+            for q, pos in zip(quote, posizioni)]
