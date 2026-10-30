@@ -16,10 +16,10 @@
 |---|---|---|---|
 | 1 | Lettura | ok | 583 entità originali lette |
 | 2 | Conservazione | ok | tutte le entità originali presenti e invariate |
-| 3 | Layer | ok | presenti: DOMUS_CARTIGLIO, DOMUS_NOTE, DOMUS_QUOTE, DOMUS_QUOTE_INTERNE |
-| 4 | Quote | ok | 50 quote, misure uguali alla geometria (tolleranza 1e-6), testo = misura × 1 |
+| 3 | Layer | ok | presenti: 01Cotas 1, DOMUS_CARTIGLIO, DOMUS_NOTE |
+| 4 | Quote | ok | 78 quote, misure uguali alla geometria (tolleranza 1e-6), testo = misura × 1 |
 | 5 | Cartiglio | ok | blocco DOMUS_CARTIGLIO con attributi, in basso a destra fuori dal disegno |
-| 6 | Esportazione | ok | elaborato.dxf, 695981 byte, DXF AC1032 |
+| 6 | Esportazione | ok | elaborato.dxf, 731048 byte, DXF AC1032 |
 | 7 | Riapertura | ok | riaperto con ezdxf, audit: 0 errori, 0 correzioni |
 | 8 | Compatibilità AutoCAD | da verificare | da aprire in AutoCAD sul Mac: in questo ambiente AutoCAD non c'è |
 | 9 | Integrità dell'originale | ok | SHA-256 del file originale invariato |
@@ -32,24 +32,28 @@
 
 - Origine: main: REF.OPCION 2.dxf (SHA-256 0432e5a8951cd9da…)
 - Letto DXF AC1032: 583 entità, 13 layer
-- Generate 28 quote esterne su DOMUS_QUOTE (catene parziali e totali sui 4 lati)
-- Generate 22 quote interne su DOMUS_QUOTE_INTERNE (luci nette tra muri affacciati, minimo 0.5 m)
-- Edificio chiuso con i layer: 01Seccionado carpintería; parte esterna del riquadro: 60%
+- Quote sul layer '01Cotas 1' con lo stile '50' del profilo e le modifiche {'dimscale': 1.0}
+- Generate 28 quote esterne (catene parziali e totali sui 4 lati), muri: 01Seccionado albanileria, 01Seccionado albañilería, 01Trama solido
+- Generate 50 quote interne: luci tra muri (minimo 0.5 m) e distanze degli arredi (minimo 0.3 m)
+- Limiti: 01Visto · arredi: 01Mobiliario · porte e finestre: 01Seccionado carpintería
 - Inseriti cartiglio (blocco con attributi) e nota sul layer DOMUS_NOTE
-- Salvato elaborato.dxf (695981 byte)
+- Salvato elaborato.dxf (731048 byte)
 - Creata anteprima.svg
 
 ## Comando usato
 
 ```bash
-python -m domus_cad elabora "REF.OPCION 2.dxf" --uscita lavori/vivienda-moya --scala 50 \
-  --layer-muri "01Seccionado albañilería" "01Seccionado albanileria" "01Trama solido" \
-  --progetto "Vivienda Moya - opción 2"
+python -m domus_cad elabora "REF.OPCION 2.dxf" --uscita lavori/vivienda-moya --progetto "Vivienda Moya - opción 2"
 ```
+
+Layer, stile e scala vengono dal profilo `profili/studio.json`, ricavato in automatico dal file di riferimento
+`03_BASICO_VIVIENDA MOYA OPCION 2-3.dxf` con `python -m domus_cad profilo`.
 
 ## Confronto con le quote dello studio (layer `01Cotas 1` di `03_BASICO`)
 
-Quote interne uguali al riferimento: 7.20, 4.00, 3.50 (due), 1.50, 1.40, 1.00, 0.90.
-Mancano rispetto al riferimento:
-- le distanze tra arredi e muri (0.90 tra tavolo e cucina, 0.80…), perché qui si misura solo da muro a muro;
-- alcune profondità delle camere, quando il muro di fronte è su un layer non quotato o non c'è (garage).
+- Stesso layer (`01Cotas 1`), stesso stile (`50`), stessa modifica per quota (DIMSCALE 1): lo stile del file non viene toccato.
+- Quote uguali al riferimento: 7.20, 4.00, 3.50, 2.20, 1.60, 1.50, 1.40, 1.30, 1.00, 0.90 (tavolo-cucina), 0.80.
+- Differenze ancora visibili:
+  - nel giardino in basso compaiono quote muro-recinzione (2.85) che lo studio non mette;
+  - mancano alcune misure degli arredi presenti nel riferimento (larghezza del tavolo 0.80, divano 0.40), perché le misure interne a un singolo arredo vengono scartate di proposito;
+  - alcune quote vicine hanno i testi accostati.

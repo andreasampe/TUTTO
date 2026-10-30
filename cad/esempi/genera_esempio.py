@@ -2,7 +2,7 @@
 
 Non è un rilievo e non va usato come prova sui file reali (specifica, punto 21):
 serve solo finché non arriva una planimetria vera da AutoCAD.
-Unità: metri. Muri esterni 30 cm, tramezzi 10 cm, finestre e porte su layer separati.
+Unità: metri. Muri esterni 30 cm, tramezzi 10 cm, finestre, porte e un tavolo su layer separati.
 """
 from pathlib import Path
 
@@ -12,7 +12,7 @@ import ezdxf
 def genera(percorso: Path) -> Path:
     doc = ezdxf.new("R2018", setup=True)
     doc.header["$INSUNITS"] = 6  # metri
-    for nome, colore in (("MURI", 7), ("TRAMEZZI", 8), ("FINESTRE", 5), ("PORTE", 3), ("TESTI", 2)):
+    for nome, colore in (("MURI", 7), ("TRAMEZZI", 8), ("FINESTRE", 5), ("PORTE", 3), ("TESTI", 2), ("ARREDI", 6)):
         doc.layers.add(nome, color=colore)
     msp = doc.modelspace()
     esterno = [(0, 0), (12, 0), (12, 5), (9.5, 5), (9.5, 9), (0, 9)]
@@ -27,6 +27,8 @@ def genera(percorso: Path) -> Path:
     for (x1, y1, x2, y2) in ((1.6, 0, 3.0, 0), (7.4, 0, 9.0, 0), (12, 1.8, 12, 3.2), (2.0, 9, 3.6, 9), (6.6, 9, 8.0, 9)):
         msp.add_line((x1, y1), (x2, y2), dxfattribs={"layer": "FINESTRE"})
     msp.add_circle((8.0, 2.5), 0.15, dxfattribs={"layer": "MURI"})  # pilastro circolare
+    # tavolo nel soggiorno: 1,20 dal muro a sinistra, 0,70 da quello in basso
+    msp.add_lwpolyline([(1.5, 1.0), (3.0, 1.0), (3.0, 1.8), (1.5, 1.8)], close=True, dxfattribs={"layer": "ARREDI"})
     msp.add_arc((4.2, 4.55), 0.8, 0, 90, dxfattribs={"layer": "PORTE"})
     msp.add_arc((5.25, 3.6), 0.8, 90, 180, dxfattribs={"layer": "PORTE"})
     for testo, x, y in (("SOGGIORNO", 1.5, 2.2), ("CAMERA", 1.5, 6.5), ("CUCINA", 7.5, 2.2), ("BAGNO", 6.6, 6.5)):

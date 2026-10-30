@@ -10,14 +10,20 @@ File di avanzamento del progetto (punto 17.6): va aggiornato alla fine di ogni f
 | 3 — Modello dell'edificio | locali, pareti, porte, finestre, superfici, correzioni manuali | da iniziare |
 | 4 — Elaborati architettonici | stato di fatto/progetto, demolizioni e costruzioni, layer e cartigli configurabili | da iniziare |
 | 5 — Impianti | elettrico, idrico-sanitario, scarichi | da iniziare: **solo dopo** la Fase 1 su file reali |
-| 6 — Integrazione web | collegare il motore a DOMUS (sito) | DOMUS web esiste già (gestione dello studio, cartella `../domus`); il collegamento è da fare |
+| 6 — Integrazione web | collegare il motore a DOMUS (sito) | DOMUS web esiste già (gestione dello studio, cartella `../domus`); il collegamento è da fare. **Richiesta di Andrea:** quando uno studio si registra carica il suo file di riferimento; DOMUS ne ricava il profilo (`domus_cad profilo`) e lo usa per tutti i suoi elaborati, con una pagina per controllare e correggere i ruoli dei layer |
 | 7 — Evoluzione | computi, quantità, AI locale | futuro |
 
 ## Prossime attività (in ordine)
 
 1. ~~Planimetria reale~~: arrivata il 30/10/2026 (Vivienda Moya), elaborata `REF.OPCION 2`.
 2. ~~Quote in metri, interne ed esterne, nello stile di `01Cotas 1`~~: fatto il 30/10/2026 (`domus_cad/interne.py`).
-   **Andrea:** riaprire in AutoCAD la seconda versione e dire se le quote vanno bene.
+   Terza versione (30/10/2026):
+   - quote sul layer e con lo stile dello studio;
+   - distanze degli arredi;
+   - zone aperte quotate;
+   - **profilo ricavato in automatico dal file di riferimento** (`domus_cad profilo`).
+
+   **Andrea:** riaprire in AutoCAD e dire se va bene.
 3. **Andrea:** inviare il riferimento esterno mancante `00 REF_VIVIENDA MOYA` (DXF).
 4. **Scelta della zona** nei file con più tavole affiancate (come il file principale):
    - riconoscere automaticamente le cornici delle tavole;

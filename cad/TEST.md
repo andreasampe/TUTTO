@@ -6,14 +6,18 @@
 python3 -m unittest discover -s tests
 ```
 
-13 test, tutti superati il 30/10/2026 (Python 3.13, ezdxf 1.4.2). Usano `esempi/esempio_artificiale.dxf`, un appartamento **inventato** di 12 × 9 m in metri: **non sono una prova su file reali**.
+17 test, tutti superati il 30/10/2026 (Python 3.13, ezdxf 1.4.2). Usano `esempi/esempio_artificiale.dxf`, un appartamento **inventato** di 12 × 9 m in metri: **non sono una prova su file reali**.
 
 | Test | Cosa verifica |
 |---|---|
 | flusso completo | nessun controllo fallito; esistono elaborato, anteprima, log e rapporto |
 | quote totali | 12,00 / 9,00 / 5,00 m come nel disegno; le catene parziali sommano al totale |
-| quote in metri | stile come lo stile "50" dello studio: metri, 2 decimali, punto, pallino |
-| testo in centimetri | con `formato="cm"` il fattore di conversione è 100 |
+| layer e stile dello studio | tutte le quote su `01Cotas 1` con lo stile `50`, layer di colore 220, testo FUTURA, solo DIMSCALE 1 sulla quota |
+| testo in metri | il testo disegnato è "12.00" (punto e due decimali, come in AutoCAD) |
+| testo in centimetri | con `formato="cm"` la quota ha DIMLFAC 100 |
+| distanze degli arredi | tavolo dell'esempio a 1,20 e 0,70 dai muri |
+| profilo automatico | da un riferimento con layer `A-ANNO-DIMS` e stile `ARCH 100` riconosce layer, stile, scala 1:100 e ruoli |
+| ruoli dalla geometria | con layer chiamati L1 e L2 riconosce muri e arredi dalla geometria |
 | quote interne | luci nette 4,90 / 4,20 / 4,10 dei locali; niente spessori di muro; nessuna quota attraversa il tramezzo |
 | senza quote interne | l'opzione le disattiva |
 | originale intatto | SHA-256 dell'originale e della sua copia invariati |
@@ -57,6 +61,21 @@ Andrea ha fornito 3 file di un progetto reale, *"Vivienda Moya"* (Spagna, normat
   - alcune profondità delle camere;
   - il garage, che sul layer dei muri è aperto;
 - test 8 sulla seconda versione: **da verificare** in AutoCAD.
+
+Andrea sulla seconda versione:
+- le quote devono stare sul layer `01Cotas 1`, con le stesse proprietà;
+- vanno quotate anche le distanze tra arredi e muri;
+- il garage va quotato anche se è aperto;
+- layer e arredi vanno riconosciuti in automatico dal file di riferimento di ogni studio.
+
+**REF.OPCION 2, terza versione** (profilo ricavato in automatico da `03_BASICO`):
+- 28 quote esterne e 50 interne, tutte sul layer `01Cotas 1` con lo stile `50` già presente nel file (non modificato);
+- quote uguali al riferimento:
+  - 7.20, 4.00, 3.50, 2.20, 1.60, 1.50, 1.40, 1.30, 1.00, 0.80;
+  - 0.90 tra tavolo e cucina;
+  - il garage è quotato (3.33);
+- test 1-7, 9 e 11 **ok**; test 8 **da verificare** in AutoCAD;
+- **problema tecnico risolto:** nel DXF AutoCAD non scrive i valori predefiniti dello stile (separatore decimale, zeri, testo orizzontale) ed ezdxf li sostituiva con quelli ISO ("0,6" invece di "0.60"). Ora la grafica della quota usa i predefiniti di AutoCAD, senza modificare lo stile.
 
 **Errore trovato grazie al file reale e corretto:** il controllo di conservazione falliva sui CERCHI, che nell'esempio artificiale non c'erano. Ora l'esempio contiene un pilastro circolare e il test lo copre.
 

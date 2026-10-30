@@ -1,0 +1,94 @@
+{
+  "descrizione": "Profilo dello studio ricavato IN AUTOMATICO il 30/10/2026 dal file di riferimento 03_BASICO_VIVIENDA MOYA OPCION 2-3.dxf (python -m domus_cad profilo FILE --uscita profili/studio.json). Usato da 'domus_cad elabora' se non si indica --profilo. I ruoli dei layer si possono correggere a mano.",
+  "rilevato": [
+    "layer delle quote '01Cotas 1': 104 quote su 267",
+    "stile di quota '50': il più usato su quel layer",
+    "layer_muri: 01Seccionado albanileria, 01Seccionado albañilería, 01Trama solido, 01Trama solido 1, 02Albañilería, 02Albañilería 2 (dal nome)",
+    "layer_aperture: 01Seccionado carpintería, 04Ventana Presentación, 04Ventanas presentación (dal nome)",
+    "layer_arredi: 01Mobiliario (dal nome)",
+    "layer_limiti: 01Visto (dal nome)",
+    "scala 1:50"
+  ],
+  "layer_quote": {
+    "name": "01Cotas 1",
+    "flags": 0,
+    "color": 220,
+    "linetype": "Continuous",
+    "lineweight": -3
+  },
+  "stile_quote": {
+    "name": "50",
+    "flags": 0,
+    "dimscale": 0.0,
+    "dimasz": 0.07,
+    "dimexo": 0.2,
+    "dimdli": 0.05,
+    "dimexe": 0.2,
+    "dimse1": 1,
+    "dimse2": 1,
+    "dimtxt": 0.1,
+    "dimcen": 0.1,
+    "dimaltf": 0.0394,
+    "dimgap": 0.01,
+    "dimaltd": 4,
+    "dimtofl": 1,
+    "dimadec": 2,
+    "dimdec": 2,
+    "dimtdec": 2,
+    "dimalttd": 4,
+    "dimtmove": 2,
+    "dimtzin": 8,
+    "dimaltz": 8,
+    "dimalttz": 8,
+    "dimatfit": 2,
+    "dimblk": "_DOT",
+    "dimblk1": "",
+    "dimblk2": "",
+    "dimldrblk": "_DOT",
+    "dimtxsty": "FUTURA"
+  },
+  "stile_testo": {
+    "name": "FUTURA",
+    "flags": 0,
+    "height": 0.0,
+    "width": 1.199999999999999,
+    "oblique": 0.0,
+    "generation_flags": 0,
+    "last_height": 0.2,
+    "font": "",
+    "bigfont": "",
+    "xdata_acad": [
+      [
+        1000,
+        "Futura Bk BT"
+      ],
+      [
+        1071,
+        34
+      ]
+    ]
+  },
+  "override": {
+    "dimscale": 1.0
+  },
+  "layer_muri": [
+    "01Seccionado albanileria",
+    "01Seccionado albañilería",
+    "01Trama solido",
+    "01Trama solido 1",
+    "02Albañilería",
+    "02Albañilería 2"
+  ],
+  "layer_aperture": [
+    "01Seccionado carpintería",
+    "04Ventana Presentación",
+    "04Ventanas presentación"
+  ],
+  "layer_arredi": [
+    "01Mobiliario"
+  ],
+  "layer_limiti": [
+    "01Visto"
+  ],
+  "scala": 50
+}

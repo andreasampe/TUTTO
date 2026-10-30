@@ -14,7 +14,7 @@ QUI = Path(__file__).resolve().parent
 sys.path.insert(0, str(QUI.parent))
 sys.path.insert(0, str(QUI.parent / "esempi"))
 
-from domus_cad import quote  # noqa: E402
+from domus_cad import profilo  # noqa: E402
 from domus_cad.elabora import elabora, impronta  # noqa: E402
 from genera_esempio import genera  # noqa: E402
 
@@ -50,19 +50,32 @@ class Prototipo(unittest.TestCase):
             parziali = sum(q["misura"] for q in esito["quote"] if q["lato"] == lato and q["livello"] == 1)
             self.assertAlmostEqual(parziali, totali[lato], places=9)
 
-    def test_quote_in_metri_come_lo_studio(self):
+    def test_quote_sul_layer_e_con_lo_stile_dello_studio(self):
         esito = self.elabora()
         doc = ezdxf.readfile(esito["elaborato"])
-        stile = doc.dimstyles.get(quote.STILE)
-        self.assertEqual(stile.dxf.dimlfac, 1.0)      # metri
-        self.assertEqual(stile.dxf.dimdec, 2)         # 1.50
-        self.assertEqual(stile.dxf.dimdsep, ord("."))
-        self.assertEqual(stile.dxf.dimblk, "_DOT")    # pallino, come lo stile "50" dello studio
+        dims = list(doc.modelspace().query("DIMENSION"))
+        self.assertEqual(len(dims), len(esito["quote"]))
+        self.assertTrue(all(d.dxf.layer == "01Cotas 1" and d.dxf.dimstyle == "50" for d in dims))
+        self.assertEqual(doc.layers.get("01Cotas 1").dxf.color, 220)   # proprietà del layer dello studio
+        stile = doc.dimstyles.get("50")
+        self.assertEqual(stile.dxf.dimtxt, 0.1)
+        self.assertEqual(stile.dxf.dimblk, "_DOT")
+        self.assertEqual(stile.dxf.dimtxsty, "FUTURA")
+        # su ogni quota solo la modifica usata dallo studio (DIMSCALE 1), come nel riferimento
+        self.assertEqual(profilo._override(dims[0]), {"dimscale": 1.0})
+
+    def test_testo_in_metri_con_punto_e_due_decimali(self):
+        esito = self.elabora()
+        doc = ezdxf.readfile(esito["elaborato"])
+        testi = [t.dxf.text for d in doc.modelspace().query("DIMENSION")
+                 for t in doc.blocks.get(d.dxf.geometry).query("MTEXT TEXT")]
+        self.assertIn("12.00", [t.split(";")[-1].strip("}") for t in testi])
 
     def test_testo_delle_quote_in_centimetri(self):
         esito = self.elabora(formato="cm")
         doc = ezdxf.readfile(esito["elaborato"])
-        self.assertEqual(doc.dimstyles.get(quote.STILE).dxf.dimlfac, 100.0)
+        d = next(iter(doc.modelspace().query("DIMENSION")))
+        self.assertEqual(profilo._override(d)["dimlfac"], 100.0)
 
     def test_quote_interne_delle_stanze(self):
         esito = self.elabora()
@@ -76,8 +89,43 @@ class Prototipo(unittest.TestCase):
         # a sinistra nessuna quota attraversa il tramezzo tra soggiorno e camera (a destra
         # invece cucina e bagno dell'esempio non sono divisi da un muro: 8,40 lì è giusta)
         self.assertFalse([q for q in luci if q["p1"][0] < 5.2 and round(q["misura"], 2) == 8.40])
-        doc = ezdxf.readfile(esito["elaborato"])
-        self.assertEqual(len(doc.modelspace().query('DIMENSION[layer=="DOMUS_QUOTE_INTERNE"]')), len(luci))
+
+    def test_distanze_degli_arredi(self):
+        esito = self.elabora()  # il layer ARREDI viene riconosciuto dal nome
+        misure = [round(q["misura"], 2) for q in esito["quote"] if q["lato"] == "interno"]
+        self.assertIn(1.20, misure)   # tavolo - muro a sinistra
+        self.assertIn(0.70, misure)   # tavolo - muro in basso
+
+    def test_profilo_riconosciuto_in_automatico(self):
+        rif = ezdxf.new("R2018", setup=True)
+        rif.header["$INSUNITS"] = 6
+        rif.layers.add("A-ANNO-DIMS", color=3)
+        rif.dimstyles.new("ARCH 100", dxfattribs={"dimtxt": 0.2, "dimasz": 0.1})
+        msp = rif.modelspace()
+        for i in range(5):
+            msp.add_linear_dim(base=(0, -1), p1=(i, 0), p2=(i + 1, 0), dimstyle="ARCH 100",
+                               dxfattribs={"layer": "A-ANNO-DIMS"}).render()
+        msp.add_linear_dim(base=(0, -2), p1=(0, 0), p2=(5, 0), dimstyle="Standard").render()  # layer 0: minoranza
+        for nome in ("A-WALL", "A-FURN", "A-DOOR"):
+            msp.add_line((0, 0), (1, 0), dxfattribs={"layer": nome})
+        p = profilo.rileva(rif)
+        self.assertEqual(p["layer_quote"]["name"], "A-ANNO-DIMS")
+        self.assertEqual(p["layer_quote"]["color"], 3)
+        self.assertEqual(p["stile_quote"]["name"], "ARCH 100")
+        self.assertEqual(p["scala"], 100)
+        self.assertEqual((p["layer_muri"], p["layer_arredi"], p["layer_aperture"]), (["A-WALL"], ["A-FURN"], ["A-DOOR"]))
+
+    def test_ruoli_dei_layer_dalla_geometria(self):
+        doc = ezdxf.readfile(self.dxf)  # stessi disegni, ma con nomi di layer che non dicono niente
+        doc.layers.add("L1"); doc.layers.add("L2")
+        for e in doc.modelspace():
+            e.dxf.layer = {"MURI": "L1", "TRAMEZZI": "L1", "ARREDI": "L2"}.get(e.dxf.layer, "L9")
+        for x, y in ((6, 1), (7, 1), (6, 6), (8, 6)):
+            doc.modelspace().add_lwpolyline([(x, y), (x + 0.8, y), (x + 0.8, y + 0.6), (x, y + 0.6)], close=True,
+                                            dxfattribs={"layer": "L2"})
+        ruoli, motivi = profilo.ruoli(doc)
+        self.assertEqual(ruoli["layer_muri"], ["L1"], motivi)
+        self.assertEqual(ruoli["layer_arredi"], ["L2"], motivi)
 
     def test_senza_quote_interne(self):
         esito = self.elabora(quote_interne=False)

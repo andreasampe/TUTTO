@@ -5,7 +5,8 @@ Metodo deterministico, senza AI:
 2. per ogni lato dell'edificio si prendono i vertici vicini a quel lato (una fascia
    pari allo spessore massimo dei muri);
 3. si genera una catena di quote tra punti consecutivi, fuori dal disegno, e sotto
-   una quota totale. Le quote stanno su un layer dedicato e non toccano la geometria.
+   una quota totale. Layer e stile delle quote sono quelli del profilo dello studio
+   (`profilo.py`); la geometria esistente non viene toccata.
 
 Le misure vengono SOLO dalle coordinate del disegno: niente valori stimati.
 """
@@ -16,9 +17,7 @@ from dataclasses import dataclass
 from ezdxf.document import Drawing
 from ezdxf.math import Vec2
 
-LAYER_QUOTE = "DOMUS_QUOTE"
-STILE = "DOMUS_QUOTE"
-STILE_TESTO = "DOMUS_TESTO"
+from .profilo import aggiungi_quota
 
 
 @dataclass(frozen=True)
@@ -79,45 +78,14 @@ def calcola(punti: list[Vec2], fascia: float, tolleranza: float) -> list[Quota]:
     return quote
 
 
-def prepara_stile(doc: Drawing, u_per_mm: float, fattore_misura: float, decimali: int) -> None:
-    """Stile di quota ricavato da quello dello studio (stile "50" del layer `01Cotas 1`).
-
-    Pallino alle estremità, testo al centro della linea, punto decimale e zeri visibili
-    (1.50, 0.90). Le dimensioni sono in mm di carta: con la scala diventano unità di disegno.
-    """
-    if LAYER_QUOTE not in doc.layers:
-        doc.layers.add(LAYER_QUOTE, color=4)  # ciano, come da consuetudine
-    if STILE_TESTO not in doc.styles:
-        doc.styles.add(STILE_TESTO, font="arial.ttf")
-    if STILE in doc.dimstyles:
-        return
-    stile = doc.dimstyles.new(STILE, dxfattribs={
-        "dimtxt": 2.0 * u_per_mm,        # 2 mm stampati (0,10 m a 1:50, come lo stile dello studio)
-        "dimasz": 1.4 * u_per_mm,        # diametro del pallino
-        "dimtsz": 0,
-        "dimexe": 1.0 * u_per_mm,
-        "dimexo": 1.0 * u_per_mm,
-        "dimgap": 0.5 * u_per_mm,
-        "dimtad": 0,                     # testo al centro, la linea si interrompe
-        "dimtih": 0, "dimtoh": 0,        # testo allineato alla linea
-        "dimtofl": 1, "dimtmove": 2, "dimatfit": 2,
-        "dimdec": decimali,
-        "dimdsep": ord("."),
-        "dimzin": 0,                     # zeri visibili: 0.90, 1.50
-        "dimlfac": fattore_misura,       # 1 per i metri
-        "dimtxsty": STILE_TESTO,
-    })
-    stile.set_arrows(blk="DOT")
-
-
 def disegna(doc: Drawing, quote: list[Quota], passo: float,
-            ingombro: tuple[tuple[float, float], tuple[float, float]]) -> list[str]:
+            ingombro: tuple[tuple[float, float], tuple[float, float]],
+            layer: str, stile: str, override: dict | None = None) -> list[str]:
     """Aggiunge le quote fuori dal disegno; restituisce gli handle creati.
 
     Le linee di quota partono oltre l'ingombro di TUTTO il disegno (testi compresi),
     così non si sovrappongono a geometrie o scritte esistenti.
     """
-    msp = doc.modelspace()
     (xmin, ymin), (xmax, ymax) = ingombro
     handles: list[str] = []
     for q in quote:
@@ -130,8 +98,5 @@ def disegna(doc: Drawing, quote: list[Quota], passo: float,
             base, angolo = (min(xmin, q.p1[0]) - distanza, q.p1[1]), 90
         else:
             base, angolo = (max(xmax, q.p1[0]) + distanza, q.p1[1]), 90
-        dim = msp.add_linear_dim(base=base, p1=q.p1, p2=q.p2, angle=angolo, dimstyle=STILE,
-                                 dxfattribs={"layer": LAYER_QUOTE})
-        dim.render()
-        handles.append(dim.dimension.dxf.handle)
+        handles.append(aggiungi_quota(doc, base, q.p1, q.p2, angolo, layer, stile, override or {}))
     return handles

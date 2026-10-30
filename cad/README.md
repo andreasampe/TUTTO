@@ -21,34 +21,43 @@ python3 -m venv .venv
 
 ## Uso
 
-1. In AutoCAD apri la planimetria e fai *Salva con nome → DXF AutoCAD 2018*.
-2. Analizza il disegno senza modificarlo:
+1. **Una volta per studio:** ricava il profilo dal file di riferimento dello studio, cioè un disegno già quotato a mano. DOMUS riconosce da solo:
+   - il layer delle quote, cioè quello con più quote (per lo studio Pucci `01Cotas 1`);
+   - lo stile di quota (`50`), con il suo stile di testo, e la scala;
+   - i layer di muri, porte e finestre, arredi e limiti: dal nome in più lingue e, se il nome non basta, dalla geometria.
    ```bash
-   .venv/bin/python -m domus_cad leggi pianta.dxf
+   .venv/bin/python -m domus_cad profilo riferimento.dxf --uscita profili/studio.json
    ```
+   Il risultato è un file JSON leggibile, che si può correggere.
+2. In AutoCAD apri la planimetria e fai *Salva con nome → DXF AutoCAD 2018*.
 3. Genera la pianta quotata:
    ```bash
-   .venv/bin/python -m domus_cad elabora pianta.dxf --uscita lavori/via-roma --scala 50 --layer-muri MURI --progetto "Via Roma 12" --studio "Studio Pucci Architettura"
+   .venv/bin/python -m domus_cad elabora pianta.dxf --uscita lavori/via-roma --progetto "Via Roma 12" --studio "Studio Pucci Architettura"
    ```
 4. Apri `lavori/via-roma/elaborazioni/<data-ora>/elaborato.dxf` in AutoCAD, controllalo e salvalo come DWG.
 
-Opzioni utili:
+Cosa viene quotato:
+- **catene esterne** sui muri perimetrali, più le quote totali;
+- **luci interne** da muro a muro in ogni locale, comprese le zone aperte come il garage, quotate così come sono disegnate;
+- **distanze degli arredi** dai muri e tra loro. Non si quotano le misure dentro un singolo arredo (moduli della cucina, ripiani).
+
+Le quote vanno **sul layer e con lo stile dello studio**:
+- se il disegno li contiene già, vengono usati così come sono, senza modificarli;
+- altrimenti vengono creati con le proprietà del profilo.
+
+Su ogni quota resta solo la modifica che usa anche lo studio (es. DIMSCALE 1).
+
+Opzioni utili (di solito non servono, perché vale il profilo):
 
 | Opzione | Effetto |
 |---|---|
+| `--profilo FILE` | profilo dello studio (predefinito `profili/studio.json`) |
 | `--unita m` / `cm` / `mm` | obbligatoria se il file non dichiara le unità |
-| `--layer-muri MURI A-WALL` | layer dei muri: linee, polilinee e **campiture** (i muri campiti contano come massa piena) |
-| `--formato m` / `cm` / `mm` | unità del testo delle quote (predefinito: metri, 2 decimali, come `01Cotas 1`) |
-| `--layer-aperture …` | layer di porte e finestre (predefinito: riconosciuti dal nome, es. *carpintería*, *finestre*) |
-| `--luce-minima 0.5` | luce interna minima da quotare, in metri |
+| `--scala 50` | scala di stampa (predefinita: quella del profilo) |
+| `--layer-muri …`, `--layer-arredi …`, `--layer-aperture …`, `--layer-limiti …` | forzano i ruoli dei layer |
+| `--formato m` / `cm` / `mm` | unità del testo (predefinito: metri) |
+| `--luce-minima 0.5`, `--luce-arredi 0.3` | misure minime da quotare, in metri |
 | `--senza-interne` | solo le catene esterne |
-
-Stile delle quote: copiato dallo stile "50" dei disegni dello studio (layer `01Cotas 1`):
-- pallino alle estremità e testo al centro della linea;
-- 2 mm di testo stampato (0,10 m a 1:50);
-- punto decimale e zeri visibili (1.50, 0.90).
-
-Le quote esterne vanno sul layer `DOMUS_QUOTE`, le interne su `DOMUS_QUOTE_INTERNE`.
 
 ## Test
 

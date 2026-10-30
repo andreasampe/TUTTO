@@ -3,8 +3,12 @@
 Riferimento: le quote del layer `01Cotas 1` nei disegni dello studio. Dentro ogni locale
 si misura da muro a muro, con la linea di quota che attraversa la stanza.
 
+Si quotano:
+- le luci tra muri (anche tra un muro e una linea di limite, per esempio il garage aperto);
+- le distanze tra arredi e muri e tra arredi, come nel riferimento (0.90 tra tavolo e cucina).
+
 Metodo deterministico, senza AI:
-1. si prendono i segmenti dei layer dei muri (linee, polilinee, archi spezzati);
+1. si prendono i segmenti dei layer di muri, limiti e arredi (linee, polilinee, blocchi, archi spezzati);
 2. da ogni faccia si lanciano raggi perpendicolari, ogni 5 cm, verso entrambi i lati;
    il primo muro colpito, se è parallelo alla faccia (entro 15°), dà una luce netta;
 3. i raggi consecutivi che colpiscono lo stesso muro formano un tratto: la quota va
@@ -12,10 +16,10 @@ Metodo deterministico, senza AI:
 4. si scartano:
    - le luci più corte della luce minima (spessori dei muri);
    - i tratti troppo brevi (spalle delle porte);
-   - le luci che stanno fuori dall'edificio. Per riconoscerle, il disegno viene
-     rasterizzato con muri e serramenti e "allagato" dal bordo: ciò che l'acqua
-     raggiunge è esterno;
-5. le luci uguali tra le stesse due linee di muro si contano una volta sola.
+   - le quote che passano da una porta e misurano due locali insieme. Per riconoscerle,
+     il disegno viene rasterizzato e i varchi stretti vengono chiusi (chiusura morfologica);
+   le zone aperte (garage, giardini) si quotano comunque, come sono disegnate;
+5. le misure uguali tra le stesse due linee nello stesso locale si contano una volta sola.
 
 Le misure vengono SOLO dalle coordinate del disegno.
 """
@@ -27,10 +31,9 @@ import numpy as np
 from ezdxf import path as dxfpath
 from ezdxf.document import Drawing
 
+from .profilo import aggiungi_quota
 from .quote import Quota
 
-LAYER = "DOMUS_QUOTE_INTERNE"
-PAROLE_APERTURE = ("carpint", "porte", "porta", "finestr", "serrament", "infiss", "door", "window")
 LIBERO, OSTACOLO, ESTERNO = 0, 1, 2
 
 
@@ -45,9 +48,7 @@ def geometria(doc: Drawing, layer: set[str] | None, tolleranza: float, m_per_u: 
     """
     segmenti: list[tuple[float, float, float, float]] = []
     masse: list[list[tuple[float, float]]] = []
-    for e in doc.modelspace().query("LINE LWPOLYLINE POLYLINE ARC CIRCLE SPLINE ELLIPSE HATCH"):
-        if layer and e.dxf.layer not in layer:
-            continue
+    for e in _entita(doc.modelspace(), layer):
         try:
             percorsi = dxfpath.from_hatch(e) if e.dxftype() == "HATCH" else [dxfpath.make_path(e)]
             for percorso in percorsi:
@@ -65,15 +66,44 @@ def geometria(doc: Drawing, layer: set[str] | None, tolleranza: float, m_per_u: 
     return np.array(segmenti, dtype=float).reshape(-1, 4), masse
 
 
+def ingombri(doc: Drawing, layer: set[str], m_per_u: float = 1.0, area_max: float = 6.0) -> np.ndarray:
+    """Rettangoli d'ingombro (K, 4) xmin ymin xmax ymax di ogni entità sui layer (es. ogni arredo).
+
+    Si escludono gli oggetti più grandi di `area_max` m² (contorni del lotto, recinzioni):
+    sono limiti, non oggetti da non attraversare."""
+    from ezdxf import bbox
+
+    cache = bbox.Cache()
+    out = []
+    for e in doc.modelspace():
+        if e.dxf.layer in layer and e.dxftype() not in ("TEXT", "MTEXT", "DIMENSION"):
+            try:
+                b = bbox.extents([e], cache=cache)
+            except Exception:
+                continue
+            if b.has_data and b.size.x * b.size.y * m_per_u ** 2 <= area_max:
+                out.append((b.extmin.x, b.extmin.y, b.extmax.x, b.extmax.y))
+    return np.array(out, dtype=float).reshape(-1, 4)
+
+
+def _entita(entita, layer: set[str] | None, profondita: int = 0):
+    """Entità geometriche sui layer indicati; i blocchi vengono esplosi (solo in memoria)."""
+    for e in entita:
+        if layer and e.dxf.layer not in layer:
+            continue
+        if e.dxftype() == "INSERT" and profondita < 4:
+            try:
+                yield from _entita(e.virtual_entities(), None, profondita + 1)
+            except Exception:  # blocco non esplodibile: si ignora, non si inventa geometria
+                continue
+        elif e.dxftype() in ("LINE", "LWPOLYLINE", "POLYLINE", "ARC", "CIRCLE", "SPLINE", "ELLIPSE", "HATCH"):
+            yield e
+
+
 def _sottile(punti: list[tuple[float, float]], soglia: float) -> bool:
     area = abs(sum(a[0] * b[1] - b[0] * a[1] for a, b in zip(punti, punti[1:] + punti[:1]))) / 2
     perimetro = sum(math.dist(a, b) for a, b in zip(punti, punti[1:] + punti[:1]))
     return perimetro > 0 and area / perimetro < soglia
-
-
-def layer_aperture(doc: Drawing) -> set[str]:
-    """Layer di porte e finestre riconosciuti dal nome (servono a chiudere l'edificio)."""
-    return {l.dxf.name for l in doc.layers if any(p in l.dxf.name.lower() for p in PAROLE_APERTURE)}
 
 
 def _dilata(maschera: np.ndarray, raggio: int) -> np.ndarray:
@@ -103,7 +133,8 @@ class Mappa:
     I locali stretti (corridoi) restano interni, perché la chiusura serve solo a trovare l'esterno.
     """
 
-    def __init__(self, seg: np.ndarray, masse: list[list[tuple[float, float]]], m_per_u: float, varco: float = 0.6):
+    def __init__(self, seg: np.ndarray, masse: list[list[tuple[float, float]]], m_per_u: float, varco: float = 0.6,
+                 oggetti: np.ndarray | None = None, cella_max: float = 1.2):
         from PIL import Image, ImageDraw
 
         margine = (varco + 1.0) / m_per_u
@@ -128,22 +159,30 @@ class Mappa:
         esterno = (np.asarray(allagato) == ESTERNO) & ~ostacoli
         self.dati = np.where(ostacoli, OSTACOLO, np.where(esterno, ESTERNO, LIBERO)).astype(np.uint8)
         self.varchi = chiuso & ~ostacoli  # porte, passaggi e locali più stretti di 2 × varco
-        self.stanze = self._stanze(~chiuso & ~esterno)
+        self.stanze = self._stanze(~chiuso)
+        # celle piccole chiuse da arredi e limiti (moduli della cucina, ripiani, gradini): dentro non si quota
+        self.dentro_oggetti = np.zeros(ostacoli.shape, bool)
+        if oggetti is not None and len(oggetti):
+            for x1, y1, x2, y2 in oggetti:
+                disegno.line([self._px(x1, y1), self._px(x2, y2)], fill=OSTACOLO, width=spessore)
+            celle = self._stanze(np.asarray(img) == LIBERO)
+            numeri, aree = np.unique(celle[celle > 0], return_counts=True)
+            piccole = numeri[aree * (self.passo * m_per_u) ** 2 <= cella_max]
+            self.dentro_oggetti = np.isin(celle, piccole)
 
     @staticmethod
     def _stanze(libero: np.ndarray) -> np.ndarray:
         """Numera i locali: zone interne separate da muri e varchi chiusi (-1 = nessun locale)."""
         from PIL import Image, ImageDraw
 
-        etichette = np.full(libero.shape, -1, dtype=np.int32)
-        img = Image.fromarray(np.where(libero, 0, 255).astype(np.uint8)).copy()
-        for n in range(1, 250):
-            liberi = np.argwhere(np.asarray(img) == 0)
-            if not len(liberi):
-                break
-            r, c = liberi[0]
-            ImageDraw.floodfill(img, (int(c), int(r)), n)
-            etichette[np.asarray(img) == n] = n
+        img = Image.fromarray(np.where(libero, 0, -1).astype(np.int32)).copy()  # modo "I", copia scrivibile
+        n = 0
+        for r, c in np.argwhere(libero):
+            if img.getpixel((int(c), int(r))) == 0:  # pixel libero non ancora numerato
+                n += 1
+                ImageDraw.floodfill(img, (int(c), int(r)), n)
+        etichette = np.asarray(img).astype(np.int32)
+        etichette[etichette <= 0] = -1
         return etichette
 
     def _px(self, x: float, y: float) -> tuple[int, int]:
@@ -154,12 +193,18 @@ class Mappa:
         h, w = self.dati.shape
         return int(self.dati[r, c]) if 0 <= r < h and 0 <= c < w else ESTERNO
 
+    def in_oggetto(self, x: float, y: float) -> bool:
+        c, r = self._px(x, y)
+        h, w = self.dentro_oggetti.shape
+        return bool(0 <= r < h and 0 <= c < w and self.dentro_oggetti[r, c])
+
     def locale(self, p: tuple[float, float], q: tuple[float, float]) -> int | None:
         """Locale attraversato dalla linea p-q, oppure None se la quota va scartata perché:
         - tocca l'esterno;
         - corre dentro un muro;
         - passa da una porta e misura due locali insieme.
-        Un locale stretto (corridoio) dà -1: è interno ma non numerato."""
+        Le zone aperte (garage, giardini) sono valide: si quota ciò che è disegnato.
+        Un locale stretto (corridoio) dà -1: è valido ma non numerato."""
         h, w = self.dati.shape
         valori, varchi, stanze = [], [], []
         for f in np.linspace(0.05, 0.95, 19):
@@ -167,7 +212,7 @@ class Mappa:
             if not (0 <= r < h and 0 <= c < w):
                 return None
             valori.append(int(self.dati[r, c])); varchi.append(bool(self.varchi[r, c])); stanze.append(int(self.stanze[r, c]))
-        if ESTERNO in valori or valori.count(LIBERO) < 0.6 * len(valori):
+        if valori.count(OSTACOLO) > 0.4 * len(valori):
             return None
         quota_varchi = sum(varchi) / len(varchi)
         if 0.03 < quota_varchi < 0.7:
@@ -204,12 +249,20 @@ def _raggi(seg: np.ndarray, origini: np.ndarray, direzioni: np.ndarray, massimo:
     return indici, distanze
 
 
-def calcola(seg_muri: np.ndarray, mappa: Mappa | None, m_per_u: float, *, passo: float = 0.05,
-            luce_minima: float = 0.5, tratto_minimo: float = 0.3, angolo_max: float = 15.0) -> list[Quota]:
-    """Luci nette interne, in unità di disegno. I parametri sono in metri."""
+def calcola(seg_muri: np.ndarray, mappa: Mappa | None, m_per_u: float, *, arredo: np.ndarray | None = None,
+            ingombri_arredi: np.ndarray | None = None,
+            passo: float = 0.05, luce_minima: float = 0.5, luce_arredi: float = 0.3, tratto_minimo: float = 0.3,
+            angolo_max: float = 15.0) -> list[Quota]:
+    """Luci nette e distanze degli arredi, in unità di disegno. I parametri sono in metri.
+
+    `arredo[i]` è vero se il segmento i è un arredo: le misure che lo toccano hanno
+    come minimo `luce_arredi` invece di `luce_minima`, e non devono stare dentro
+    l'ingombro di un arredo (moduli della cucina, ripiani, gradini non si quotano)."""
     if len(seg_muri) == 0:
         return []
     passo_u, minima_u, tratto_u = passo / m_per_u, luce_minima / m_per_u, tratto_minimo / m_per_u
+    arredo = np.zeros(len(seg_muri), bool) if arredo is None else arredo
+    arredi_u = luce_arredi / m_per_u
     lunghezze = np.hypot(seg_muri[:, 2] - seg_muri[:, 0], seg_muri[:, 3] - seg_muri[:, 1])
     unitari = (seg_muri[:, 2:] - seg_muri[:, :2]) / np.where(lunghezze > 0, lunghezze, 1)[:, None]
     seno_max = math.sin(math.radians(angolo_max))
@@ -249,11 +302,19 @@ def calcola(seg_muri: np.ndarray, mappa: Mappa | None, m_per_u: float, *, passo:
             continue
         m = gruppo.start + (gruppo.stop - gruppo.start) // 2
         d = float(distanza[m])
-        if d < minima_u:
+        minimo = arredi_u if arredo[i] or arredo[j] else minima_u
+        if d < minimo:
             continue
         p = origini[m]
         q = p + direzioni[m] * d
         p, q = (float(p[0]), float(p[1])), (float(q[0]), float(q[1]))
+        if arredo[i] or arredo[j]:
+            cx, cy, eps = (p[0] + q[0]) / 2, (p[1] + q[1]) / 2, 0.01 / m_per_u
+            if mappa is not None and mappa.in_oggetto(cx, cy):
+                continue
+            g = ingombri_arredi
+            if g is not None and len(g) and np.any((g[:, 0] + eps < cx) & (cx < g[:, 2] - eps) & (g[:, 1] + eps < cy) & (cy < g[:, 3] - eps)):
+                continue
         locale = mappa.locale(p, q) if mappa is not None else -1
         if locale is None:
             continue
@@ -262,7 +323,7 @@ def calcola(seg_muri: np.ndarray, mappa: Mappa | None, m_per_u: float, *, passo:
             angolo -= 180
         # punteggio: tratto lungo, e a parità meglio una quota orizzontale o verticale
         punteggio = lunghezza_tratto * (1.2 if min(angolo % 90, 90 - angolo % 90) < 0.5 else 1.0)
-        candidati.append((punteggio, locale, _linea(seg_muri[i]), _linea(seg_muri[j]), Quota("interno", 0, p, q, round(d, 9), angolo)))
+        candidati.append((punteggio, locale, _linea(seg_muri[i]), _linea(seg_muri[j]), Quota("interno", 0, p, q, round(d, 9), angolo), minimo))
 
     # lo spazio attraversato deve essere largo almeno la luce minima anche di traverso:
     # altrimenti la quota corre dentro un muro disegnato a due linee
@@ -271,7 +332,7 @@ def calcola(seg_muri: np.ndarray, mappa: Mappa | None, m_per_u: float, *, passo:
         trasversali = np.array([[-math.sin(math.radians(c[4].angolo)), math.cos(math.radians(c[4].angolo))] for c in candidati])
         _, avanti = _raggi(seg_muri, centri, trasversali, massimo=40 / m_per_u)
         _, indietro = _raggi(seg_muri, centri, -trasversali, massimo=40 / m_per_u)
-        candidati = [c for c, larghezza in zip(candidati, avanti + indietro) if larghezza >= minima_u]
+        candidati = [c for c, larghezza in zip(candidati, avanti + indietro) if larghezza >= c[5]]
 
     # stessa coppia di linee di muro nello stesso locale = una sola quota (la più rappresentativa)
     scelte: list[tuple] = []
@@ -304,16 +365,10 @@ def _centro(q: Quota) -> tuple[float, float]:
     return (q.p1[0] + q.p2[0]) / 2, (q.p1[1] + q.p2[1]) / 2
 
 
-def disegna(doc: Drawing, quote: list[Quota], stile: str) -> list[str]:
+def disegna(doc: Drawing, quote: list[Quota], layer: str, stile: str, override: dict | None = None) -> list[str]:
     """Quote interne con la linea che attraversa il locale, come nei disegni dello studio."""
-    if LAYER not in doc.layers:
-        doc.layers.add(LAYER, color=4)
-    msp = doc.modelspace()
     handles: list[str] = []
     for q in quote:
         base = ((q.p1[0] + q.p2[0]) / 2, (q.p1[1] + q.p2[1]) / 2)
-        dim = msp.add_linear_dim(base=base, p1=q.p1, p2=q.p2, angle=q.angolo, dimstyle=stile,
-                                 dxfattribs={"layer": LAYER})
-        dim.render()
-        handles.append(dim.dimension.dxf.handle)
+        handles.append(aggiungi_quota(doc, base, q.p1, q.p2, q.angolo, layer, stile, override or {}))
     return handles

@@ -17,7 +17,7 @@ import ezdxf
 import numpy as np
 from ezdxf import recover
 
-from . import cartiglio, interne, lettura, quote
+from . import cartiglio, interne, lettura, profilo as profili, quote
 
 
 def impronta(percorso: Path) -> str:
@@ -44,10 +44,15 @@ def _firma(e) -> tuple:
     return (t, e.dxf.layer, g)
 
 
-def elabora(origine: str, uscita: str, *, unita: str | None = None, scala: int = 100,
-            formato: str = "m", layer_muri: set[str] | None = None,
-            layer_aperture: set[str] | None = None, quote_interne: bool = True, luce_minima: float = 0.5,
-            valori_cartiglio: dict[str, str] | None = None, ora: str | None = None) -> dict:
+def elabora(origine: str, uscita: str, *, unita: str | None = None, scala: int | None = None,
+            formato: str = "m", profilo: dict | str | None = None, layer_muri: set[str] | None = None,
+            layer_aperture: set[str] | None = None, layer_arredi: set[str] | None = None,
+            layer_limiti: set[str] | None = None, quote_interne: bool = True, luce_minima: float = 0.5,
+            luce_arredi: float = 0.3, valori_cartiglio: dict[str, str] | None = None, ora: str | None = None) -> dict:
+    """Pianta quotata. I layer non indicati vengono dal profilo dello studio
+    (predefinito `profili/studio.json`), limitati a quelli presenti nel disegno."""
+    prof = profilo if isinstance(profilo, dict) else profili.carica(profilo)
+    scala = scala or prof.get("scala") or 100
     sorgente = Path(origine)
     if sorgente.suffix.lower() != ".dxf":
         raise ValueError("Il prototipo legge file DXF. Da AutoCAD: Salva con nome → DXF (2018).")
@@ -75,31 +80,51 @@ def elabora(origine: str, uscita: str, *, unita: str | None = None, scala: int =
         raise ValueError(f"Il file dichiara '{rapporto.unita}' ma hai indicato '{unita}': verifica quale è corretto.")
     m_per_u = lettura.metri_per_unita(unita_usate)
     firme_originali = {e.dxf.handle: _firma(e) for e in doc.modelspace()}
+    presenti = {l.dxf.name for l in doc.layers}
+    riconosciuti, _ = profili.ruoli(doc)  # se il disegno usa nomi diversi dal profilo
+    def dal_profilo(indicati: set[str] | None, chiave: str) -> set[str]:
+        if indicati is not None:
+            return indicati
+        return (set(prof.get(chiave) or []) & presenti) or (set(riconosciuti.get(chiave) or []) & presenti)
+    layer_muri = dal_profilo(layer_muri, "layer_muri") or None  # nessuno trovato: tutti i layer
+    layer_arredi = dal_profilo(layer_arredi, "layer_arredi")
+    layer_limiti = dal_profilo(layer_limiti, "layer_limiti")
+    aperture = dal_profilo(layer_aperture, "layer_aperture")
 
     # 6-8. quote
     mm_carta = m_per_u * 1000 / scala          # mm di carta per unità di disegno
     u_per_mm = 1 / mm_carta                    # unità di disegno per mm di carta
     fattore = {"cm": 100.0, "m": 1.0, "mm": 1000.0}[formato] * m_per_u
-    quote.prepara_stile(doc, u_per_mm, fattore_misura=fattore, decimali=0 if formato != "m" else 2)
+    layer_quote, stile, override = profili.applica(doc, prof)
+    if abs(fattore - 1) > 1e-12:  # disegno non in metri o testo in cm/mm: si corregge solo la misura
+        override.update({"dimlfac": fattore, "dimdec": 2 if formato == "m" else 0})
+    log.append(f"Quote sul layer '{layer_quote}' con lo stile '{stile}' del profilo"
+               + (f" e le modifiche {override}" if override else ""))
     punti = quote.vertici(doc, layer_muri)
     esterne = quote.calcola(punti, fascia=0.6 / m_per_u, tolleranza=0.005 / m_per_u)
-    h_quote = quote.disegna(doc, esterne, passo=8 * u_per_mm, ingombro=rapporto.estensione)
-    log.append(f"Generate {len(esterne)} quote esterne su {quote.LAYER_QUOTE} (catene parziali e totali sui 4 lati)")
+    h_quote = quote.disegna(doc, esterne, passo=8 * u_per_mm, ingombro=rapporto.estensione,
+                            layer=layer_quote, stile=stile, override=override)
+    log.append(f"Generate {len(esterne)} quote esterne (catene parziali e totali sui 4 lati), muri: {', '.join(sorted(layer_muri or ['tutti i layer']))}")
     previste = list(esterne)
     if quote_interne:
-        seg_muri, masse = interne.geometria(doc, layer_muri, 0.01 / m_per_u, m_per_u)
-        aperture = layer_aperture if layer_aperture is not None else interne.layer_aperture(doc)
-        seg_aperture, _ = interne.geometria(doc, aperture, 0.01 / m_per_u, m_per_u) if layer_muri and aperture else (np.empty((0, 4)), [])
-        seg_chiusura = np.vstack([seg_muri, seg_aperture])
-        mappa = interne.Mappa(seg_chiusura, masse, m_per_u) if len(seg_chiusura) else None
-        luci = interne.calcola(seg_muri, mappa, m_per_u, luce_minima=luce_minima)
-        h_quote += interne.disegna(doc, luci, quote.STILE)
+        tol = 0.01 / m_per_u
+        seg_muri, masse = interne.geometria(doc, layer_muri, tol, m_per_u)
+        seg_limiti, _ = interne.geometria(doc, layer_limiti, tol, m_per_u) if layer_limiti else (np.empty((0, 4)), [])
+        seg_arredi, _ = interne.geometria(doc, layer_arredi, tol, m_per_u) if layer_arredi else (np.empty((0, 4)), [])
+        seg_aperture, _ = interne.geometria(doc, aperture, tol, m_per_u) if layer_muri and aperture else (np.empty((0, 4)), [])
+        seg_chiusura = np.vstack([seg_muri, seg_limiti, seg_aperture])
+        mappa = interne.Mappa(seg_chiusura, masse, m_per_u, oggetti=np.vstack([seg_limiti, seg_arredi])) if len(seg_chiusura) else None
+        tutti = np.vstack([seg_muri, seg_limiti, seg_arredi])
+        # limiti e arredi seguono le stesse regole: distanza minima ridotta, mai dentro un singolo oggetto
+        arredo = np.r_[np.zeros(len(seg_muri), bool), np.ones(len(seg_limiti) + len(seg_arredi), bool)]
+        oggetti = layer_arredi | layer_limiti
+        luci = interne.calcola(tutti, mappa, m_per_u, arredo=arredo, luce_minima=luce_minima, luce_arredi=luce_arredi,
+                              ingombri_arredi=interne.ingombri(doc, oggetti, m_per_u) if oggetti else None)
+        h_quote += interne.disegna(doc, luci, layer_quote, stile, override)
         previste += luci
-        log.append(f"Generate {len(luci)} quote interne su {interne.LAYER} (luci nette tra muri affacciati, minimo {luce_minima:g} m)")
-        log.append(f"Edificio chiuso con i layer: {', '.join(sorted(aperture)) or 'nessuno'}"
-                   + (f"; parte esterna del riquadro: {mappa.quota_esterna:.0%}" if mappa else ""))
-        if mappa and mappa.quota_esterna > 0.97:
-            rapporto.problemi.append("Le quote interne non trovano l'interno dell'edificio: forse una porta o finestra non è disegnata e l'edificio risulta aperto. Indica i layer dei serramenti con --layer-aperture.")
+        log.append(f"Generate {len(luci)} quote interne: luci tra muri (minimo {luce_minima:g} m) e distanze degli arredi (minimo {luce_arredi:g} m)")
+        log.append(f"Limiti: {', '.join(sorted(layer_limiti)) or 'nessuno'} · arredi: {', '.join(sorted(layer_arredi)) or 'nessuno'}"
+                   f" · porte e finestre: {', '.join(sorted(aperture)) or 'nessuno'}")
 
     # 9-10. annotazioni e cartiglio
     ext = rapporto.estensione
@@ -108,7 +133,7 @@ def elabora(origine: str, uscita: str, *, unita: str | None = None, scala: int =
                                       u_per_mm, {"SCALA": f"1:{scala}", "TAVOLA": "A.01", **(valori_cartiglio or {})})
     # nota sopra il cartiglio, allineata al suo bordo sinistro (non tocca né cartiglio né quote)
     x_cart = ext[1][0] + margine - cartiglio.LARGHEZZA_MM * u_per_mm
-    h_nota = cartiglio.nota(doc, f"Quote in {formato} - elaborato generato da DOMUS (prototipo)",
+    h_nota = cartiglio.nota(doc, f"Quote in {formato} sul layer {layer_quote} - elaborato generato da DOMUS (prototipo)",
                             (x_cart, ext[0][1] - margine + 3 * u_per_mm), 2.5 * u_per_mm)
     log.append("Inseriti cartiglio (blocco con attributi) e nota sul layer DOMUS_NOTE")
 
@@ -118,7 +143,7 @@ def elabora(origine: str, uscita: str, *, unita: str | None = None, scala: int =
     log.append(f"Salvato {elaborato.name} ({elaborato.stat().st_size} byte)")
 
     # 12-13. riapertura e verifica
-    controlli = verifica(elaborato, firme_originali, previste, h_cartiglio, sorgente, impronta_prima,
+    controlli = verifica(elaborato, firme_originali, previste, h_quote, layer_quote, h_cartiglio, sorgente, impronta_prima,
                          (ext[1][0] + margine, ext[0][1] - margine - cartiglio.ALTEZZA_MM * u_per_mm), fattore)
 
     # 14. anteprima
@@ -139,7 +164,8 @@ def elabora(origine: str, uscita: str, *, unita: str | None = None, scala: int =
     return esito
 
 
-def verifica(elaborato: Path, firme: dict, previste: list, h_cartiglio: str, sorgente: Path,
+def verifica(elaborato: Path, firme: dict, previste: list, h_quote: list[str], layer_quote: str,
+             h_cartiglio: str, sorgente: Path,
              impronta_prima: str, angolo_cartiglio: tuple[float, float], fattore: float) -> list[dict]:
     """I controlli del punto 15, eseguiti sul file RIAPERTO da disco."""
     c: list[dict] = []
@@ -157,13 +183,14 @@ def verifica(elaborato: Path, firme: dict, previste: list, h_cartiglio: str, sor
     esito(1, "Lettura", len(firme) > 0, f"{len(firme)} entità originali lette")
     mancanti = [h for h, f in firme.items() if (e := doc.entitydb.get(h)) is None or _firma(e) != f]
     esito(2, "Conservazione", not mancanti, "tutte le entità originali presenti e invariate" if not mancanti else f"{len(mancanti)} entità perse o alterate: {mancanti[:5]}")
-    attesi = {quote.LAYER_QUOTE, cartiglio.LAYER_CARTIGLIO, cartiglio.LAYER_NOTE}
-    if any(q.lato == "interno" for q in previste):
-        attesi.add(interne.LAYER)
+    attesi = {layer_quote, cartiglio.LAYER_CARTIGLIO, cartiglio.LAYER_NOTE}
     presenti = {l.dxf.name for l in doc.layers}
     esito(3, "Layer", attesi <= presenti, f"presenti: {', '.join(sorted(attesi & presenti))}")
-    dims = [d for d in msp.query("DIMENSION") if d.dxf.layer in (quote.LAYER_QUOTE, interne.LAYER)]
-    errori = []
+    dims = [doc.entitydb.get(h) for h in h_quote]
+    errori = [f"quota {h} mancante o fuori dal layer {layer_quote}" for h, d in zip(h_quote, dims)
+              if d is None or d.dxftype() != "DIMENSION" or d.dxf.layer != layer_quote]
+    if errori:
+        dims = []
     for d, q in zip(dims, previste):
         misura = d.get_measurement()
         if abs(misura - q.misura) > 1e-6:
