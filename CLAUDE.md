@@ -37,7 +37,7 @@ Webapp gestionale per lo studio di architettura (Chiara Pucci, architetto). Legg
 - **Dati**: SQLite in `domus-data/domus.sqlite`, fuori dalla cartella pubblica (percorso in `config.php`, sovrascrivibile con la variabile d'ambiente `DOMUS_DATA_DIR`). Esiste un export JSON completo (`api.php?r=export`).
 - **Migrazioni**: `src/Db.php`, costante `MIGRATIONS`. Usano `PRAGMA user_version`. Non modificare le migrazioni esistenti, aggiungerne di nuove in coda.
 - **API**: unico punto d'ingresso `api.php?r=risorsa/id`. Si usa il parametro `r` per non dipendere da regole di riscrittura degli URL (Local usa nginx). Le rotte sono nel `match` di `api.php`.
-- **Logica**: una classe per area in `src/` (`Auth`, `Clients`, `Projects` con fasi e diario, `Tasks`, `Dashboard`, `Settings`, `Backup`, `Validate`). Gli errori sono `HttpError(status, messaggio, [campo => errore])`: l'interfaccia evidenzia il campo sbagliato.
+- **Logica**: una classe per area in `src/` (`Auth`, `Users`, `Clients`, `Projects` con fasi e diario, `Tasks`, `Files`, `Permits`, `Payments`, `Hours`, `Calendar`, `Search`, `Dashboard`, `Settings`, `Backup`, `Validate`). Gli errori sono `HttpError(status, messaggio, [campo => errore])`: l'interfaccia evidenzia il campo sbagliato.
 - **Sicurezza**:
   - sessione con cookie `HttpOnly` e `SameSite=Strict`;
   - token CSRF nell'intestazione `X-CSRF-Token` per ogni modifica;
@@ -56,7 +56,13 @@ Webapp gestionale per lo studio di architettura (Chiara Pucci, architetto). Legg
   - titoli delle schede in maiuscoletto spaziato.
   - Se l'utente fornisce il file originale dell'icona, sostituire `icon.svg` mantenendo il nome o aggiornando `index.php`.
 
-### Dati gestiti (fase 1, completata)
+- **Ruoli**: `admin` e `collaboratore`. `Auth::requireAdmin()` protegge economia, utenti, impostazioni e backup. `Projects::get()` toglie `fee` e `payments` ai collaboratori, e `create`/`update` ignorano `fee` se a scriverlo non è un amministratore.
+- **Documenti**: caricati in multipart su `projects/{id}/files`, con estensioni ammesse da un elenco chiuso (`Files::TYPES`). Vengono salvati con nome casuale in `domus-data/files/<progetto>/` e serviti solo da `api.php?r=files/{id}` (`&inline=1` per l'anteprima).
+- **Scheda progetto**: le schede (`TAB_VIEWS` in `views.js`) cambiano con `history.replaceState`, senza ricaricare la pagina. L'indirizzo è `#/progetti/12/documenti`.
+
+### Dati gestiti
+
+**Fase 1 (completata)**
 
 - **Clienti**: privato / azienda / ente, codice fiscale, partita IVA, contatti.
 - **Progetti**:
@@ -67,22 +73,34 @@ Webapp gestionale per lo studio di architettura (Chiara Pucci, architetto). Legg
   - **scadenze**: anche generali di studio, senza progetto;
   - **diario di commessa**: nota, sopralluogo, riunione, telefonata, email, pratica.
 
+**Fase 2 (completata)**
+- **documenti** con categorie (tavole, foto, documenti, pratiche, contratti) e anteprima delle immagini;
+- **pratiche edilizie**: CILA, SCIA, PdC, paesaggistica, sismica, agibilità…, con ente, protocollo, deposito, esito, scadenza e stato;
+- **economia**: rate dell'onorario con fattura e incasso, riepilogo per progetto e per studio (da incassare, incassato nell'anno);
+- **ore lavorate** per persona;
+- **calendario** mensile;
+- **ricerca rapida** ⌘K;
+- **collaboratori** con ruoli;
+- **stampa** della scheda progetto.
+
 ### Come provare
 
-- `bash domus/tests/run.sh` avvia il server PHP integrato su un database temporaneo ed esegue i test dell'API in `tests/api_test.php` (51 controlli, tutti verdi alla consegna).
+- `bash domus/tests/run.sh` avvia il server PHP integrato su un database temporaneo ed esegue i test dell'API in `tests/api_test.php` (86 controlli, tutti verdi alla consegna).
 - Per l'interfaccia: `php -S` su una cartella che contiene `domus/` (per simulare il percorso `/domus/` di Local) e Playwright (preinstallato nell'ambiente cloud).
 - In questo ambiente cloud **non si può avviare WordPress** (il codice esterno è bloccato) e **non c'è accesso ai siti esterni**.
 
 ### Prossimi passi possibili (da concordare con l'utente)
 
-1. **Documenti e allegati** per progetto (tavole, foto dei sopralluoghi, PDF), salvati in `domus-data/files/` e serviti solo dopo il login.
-2. **Pratiche edilizie** (CILA, SCIA, Permesso di costruire): tipo, protocollo, date di deposito e rilascio.
-3. **Preventivi e parcelle**: voci, acconti, incassi; stato dei pagamenti per progetto.
-4. **Ore lavorate** per progetto e collaboratore.
-5. **Collaboratori** con ruoli (oggi esiste solo l'amministratore creato al primo avvio).
-6. **Calendario** di scadenze e sopralluoghi; stampa/PDF della scheda progetto.
+1. **Preventivi** da inviare al cliente, generati dalle rate, con PDF intestato allo studio.
+2. **Calcolo dell'onorario** secondo il DM 17/06/2016 (parametri), come supporto al preventivo.
+3. **Computo metrico** semplice per voci e categorie di lavoro.
+4. **Fornitori e imprese** (anagrafica separata dai clienti) collegati ai progetti.
+5. **Area clienti** in sola lettura, per condividere documenti e avanzamento.
+6. **Esportazione** del calendario in formato iCal, da abbonare sul calendario del Mac o dell'iPhone.
+7. **Promemoria via email** delle scadenze (servirebbe un invio SMTP configurato).
 
 ## Storico del repository
 
 - Prima di DOMUS qui c'era FINDER (motore di ricerca locale). L'utente l'ha fatto cancellare e resta solo nella cronologia Git.
 - **Branch di lavoro**: `claude/ciao-kds7b5`. Su `main` non c'è ancora DOMUS.
+- **Installazione sul Mac**: non ancora fatta. Andrea ha creato il sito `DOMUS` in Local, ma ha chiesto di completare il prodotto prima di copiarlo. Le istruzioni passo passo sono in `domus/README.md`: copiare `domus/` in `Local Sites/DOMUS/app/public/` e aprire `http://domus.local/domus/`.

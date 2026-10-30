@@ -1,6 +1,6 @@
 # DOMUS
 
-Webapp per lo studio di architettura: **progetti** (commesse) con fasi, **clienti**, **scadenze** e **diario di commessa**.
+Webapp per lo studio di architettura: **progetti** (commesse) con fasi, **clienti**, **scadenze**, **diario di commessa**, **documenti**, **pratiche edilizie**, **economia** (rate, fatture, incassi), **ore lavorate**, **calendario** e **collaboratori**.
 
 - È un'applicazione PHP **autonoma**: non usa WordPress e non usa il database dell'hosting.
 - I dati stanno in un **file SQLite** (`domus.sqlite`) nella cartella `domus-data`, fuori dalla parte pubblica del sito.
@@ -32,11 +32,22 @@ Local Sites/DOMUS/
 
 | Sezione | A cosa serve |
 |---|---|
-| **Panoramica** | progetti in corso con avanzamento, scadenze superate e prossime, ultime note del diario |
-| **Progetti** | elenco con ricerca e filtri per stato. Ogni progetto ha codice progressivo (`2026-001`), dati catastali, onorario, fasi, scadenze e diario |
+| **Panoramica** | progetti in corso, scadenze, pratiche in attesa di esito, fatture da incassare, diario recente |
+| **Progetti** | elenco con ricerca e filtri per stato |
+| **Scheda progetto** | sei schede: *Riepilogo* (fasi, dati, scadenze), *Diario*, *Documenti*, *Pratiche*, *Economia*, *Ore*. Pulsante **Stampa** per la scheda su carta o PDF |
 | **Clienti** | anagrafica (privati, aziende, enti) con i rispettivi progetti |
 | **Scadenze** | tutte le cose da fare: superate, entro 7 giorni, fatte |
-| **Impostazioni** | nome dello studio, fasi standard dei nuovi progetti, profilo e password, backup JSON |
+| **Calendario** | mese con scadenze, fasi, consegne, pratiche e rate (elenco sul telefono) |
+| **Impostazioni** | nome dello studio, fasi standard, collaboratori, profilo e password, backup JSON |
+
+**Ricerca rapida:** `⌘K` (Mac) o `Ctrl K` da qualunque pagina cerca progetti, clienti, protocolli delle pratiche e nomi dei documenti.
+
+**Documenti:** trascina i file nel riquadro o usa *Scegli file*. Sono ammessi PDF, immagini, DWG/DXF, IFC, SketchUp, documenti Office, ZIP e altri formati. Le foto si vedono in anteprima. I file stanno in `domus-data/files/` e si scaricano solo dopo l'accesso. La dimensione massima dipende dal PHP del sito (`upload_max_filesize` e `post_max_size`).
+
+**Ruoli:**
+- l'**amministratore** vede tutto;
+- i **collaboratori** vedono progetti, clienti, documenti, pratiche, scadenze e ore, ma non l'**economia**, le impostazioni dello studio e il backup;
+- ogni collaboratore registra le proprie ore.
 
 **Fasi:** cliccando il pallino, lo stato passa da *da fare* a *in corso* a *completata*. Il menu a tendina permette anche *non prevista*.
 
@@ -48,7 +59,7 @@ Si copiano due cartelle: `domus` (nella parte pubblica) e `domus-data` (un livel
 
 ## Backup
 
-- **Completo:** copia la cartella `domus-data` (con il sito fermo, oppure subito dopo un salvataggio).
+- **Completo:** copia la cartella `domus-data` (database e documenti), con il sito fermo oppure subito dopo un salvataggio.
 - **Leggibile:** *Impostazioni → Scarica backup JSON*.
 
 ## Test (per lo sviluppo)
@@ -57,4 +68,4 @@ Si copiano due cartelle: `domus` (nella parte pubblica) e `domus-data` (un livel
 bash tests/run.sh
 ```
 
-Avvia DOMUS con il server PHP integrato su un database temporaneo e prova tutta l'API: accesso, permessi, clienti, progetti, fasi, scadenze, diario, impostazioni, backup e protezioni.
+Avvia DOMUS con il server PHP integrato su un database temporaneo e prova tutta l'API (86 controlli): accesso, ruoli, clienti, progetti, fasi, scadenze, diario, documenti, pratiche, economia, ore, calendario, ricerca, backup e protezioni.

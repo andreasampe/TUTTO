@@ -7,7 +7,7 @@ namespace Domus;
 final class Dashboard
 {
     /** @return array<string,mixed> */
-    public static function data(): array
+    public static function data(?array $user = null): array
     {
         $counts = Db::one(
             "SELECT
@@ -18,6 +18,12 @@ final class Dashboard
              FROM projects"
         );
         return [
+            'permits' => Permits::pending(),
+            'finance' => Auth::isAdmin($user) ? Payments::studioSummary() : null,
+            'hours_week' => (float) Db::value(
+                "SELECT COALESCE(SUM(hours), 0) FROM hours WHERE user_id = ? AND work_date >= date('now','localtime','-6 days','weekday 1')",
+                [$user['id'] ?? 0]
+            ),
             'counts' => array_map('intval', $counts ?? []),
             'clients' => (int) Db::value('SELECT COUNT(*) FROM clients'),
             'overdue' => Db::all(

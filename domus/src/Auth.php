@@ -22,7 +22,7 @@ final class Auth
         if (!$id) {
             return null;
         }
-        return Db::one('SELECT id, name, email, role FROM users WHERE id = ?', [$id]);
+        return Db::one('SELECT id, name, email, role FROM users WHERE id = ? AND active = 1', [$id]);
     }
 
     /** @return array<string,mixed> */
@@ -33,6 +33,21 @@ final class Auth
             throw new HttpError(401, 'Accesso richiesto');
         }
         return $user;
+    }
+
+    /** @return array<string,mixed> */
+    public static function requireAdmin(): array
+    {
+        $user = self::requireUser();
+        if ($user['role'] !== 'admin') {
+            throw new HttpError(403, 'Questa funzione è riservata all\'amministratore');
+        }
+        return $user;
+    }
+
+    public static function isAdmin(?array $user): bool
+    {
+        return ($user['role'] ?? '') === 'admin';
     }
 
     public static function csrfToken(): string
@@ -84,7 +99,7 @@ final class Auth
 
         $email = trim((string) ($in['email'] ?? ''));
         $password = (string) ($in['password'] ?? '');
-        $row = Db::one('SELECT id, password_hash FROM users WHERE email = ?', [$email]);
+        $row = Db::one('SELECT id, password_hash FROM users WHERE email = ? AND active = 1', [$email]);
         if (!$row || !password_verify($password, $row['password_hash'])) {
             Db::insert('login_attempts', ['ip' => $ip, 'attempt_at' => time()]);
             throw new HttpError(401, 'Email o password non corretti');

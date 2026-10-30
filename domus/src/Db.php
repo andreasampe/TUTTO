@@ -104,6 +104,65 @@ final class Db
             CREATE INDEX idx_tasks_due       ON tasks(done, due_date);
             CREATE INDEX idx_journal_project ON journal(project_id, entry_date);
             SQL,
+
+        // Fase 2: documenti, pratiche edilizie, economia, ore, collaboratori.
+        2 => <<<'SQL'
+            CREATE TABLE files (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                name       TEXT NOT NULL,
+                stored     TEXT NOT NULL UNIQUE,
+                mime       TEXT NOT NULL,
+                size       INTEGER NOT NULL,
+                category   TEXT NOT NULL DEFAULT 'documento',
+                user_id    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+
+            CREATE TABLE permits (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id  INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                kind        TEXT NOT NULL,
+                status      TEXT NOT NULL DEFAULT 'in_preparazione',
+                authority   TEXT,
+                protocol    TEXT,
+                filed_at    TEXT,
+                approved_at TEXT,
+                expires_at  TEXT,
+                notes       TEXT,
+                created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+
+            CREATE TABLE payments (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id  INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                description TEXT NOT NULL,
+                amount      REAL NOT NULL,
+                due_date    TEXT,
+                invoice_no  TEXT,
+                invoiced_at TEXT,
+                paid_at     TEXT,
+                notes       TEXT,
+                created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+
+            CREATE TABLE hours (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id  INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                user_id     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                work_date   TEXT NOT NULL,
+                hours       REAL NOT NULL,
+                description TEXT,
+                created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+
+            ALTER TABLE users ADD COLUMN active INTEGER NOT NULL DEFAULT 1;
+
+            CREATE INDEX idx_files_project    ON files(project_id);
+            CREATE INDEX idx_permits_project  ON permits(project_id);
+            CREATE INDEX idx_payments_project ON payments(project_id);
+            CREATE INDEX idx_hours_project    ON hours(project_id, work_date);
+            SQL,
     ];
 
     public static function pdo(): PDO

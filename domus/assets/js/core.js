@@ -33,6 +33,20 @@ D.api = async function (method, route, body) {
   }
   return data;
 };
+// Caricamento di file (multipart): stesso controllo CSRF, niente JSON.
+D.upload = async function (route, formData) {
+  let res;
+  try {
+    res = await fetch(`api.php?r=${route}`, { method: 'POST', body: formData, credentials: 'same-origin', headers: { 'X-Requested-With': 'domus', 'X-CSRF-Token': D.csrf } });
+  } catch {
+    throw new Error('Server non raggiungibile durante il caricamento');
+  }
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 413) throw new Error(`File troppo grande per il server (limite ${D.limits?.max_post || '?'})`);
+  if (!res.ok) throw new Error(data.error || `Errore ${res.status}`);
+  return data;
+};
+
 D.get = (r) => D.api('GET', r);
 D.post = (r, b) => D.api('POST', r, b || {});
 D.put = (r, b) => D.api('PUT', r, b || {});
@@ -87,12 +101,28 @@ D.relDate = (iso) => {
 
 D.isLate = (iso) => !!iso && iso.slice(0, 10) < D.today();
 
-D.money = (n) => (n === null || n === undefined || n === '' ? '' : Number(n).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' }));
+D.money = (n) => (n === null || n === undefined || n === '' ? '' : Number(n).toLocaleString('it-IT', { style: 'currency', currency: 'EUR', useGrouping: 'always' }));
 
 D.STATUS = { preventivo: 'Preventivo', in_corso: 'In corso', sospeso: 'Sospeso', concluso: 'Concluso', archiviato: 'Archiviato' };
 D.PHASE_STATUS = { da_fare: 'Da fare', in_corso: 'In corso', completata: 'Completata', non_prevista: 'Non prevista' };
 D.JOURNAL_KIND = { nota: 'Nota', sopralluogo: 'Sopralluogo', riunione: 'Riunione', telefonata: 'Telefonata', email: 'Email', pratica: 'Pratica' };
 D.CLIENT_KIND = { privato: 'Privato', azienda: 'Azienda', ente: 'Ente pubblico' };
+
+D.PERMIT_STATUS = { in_preparazione: 'In preparazione', depositata: 'Depositata', integrazioni: 'Integrazioni richieste', approvata: 'Approvata', respinta: 'Respinta', archiviata: 'Archiviata' };
+D.FILE_CATEGORY = { tavola: 'Tavole', foto: 'Foto', documento: 'Documenti', pratica: 'Pratiche', contratto: 'Contratti', altro: 'Altro' };
+D.ROLE = { admin: 'Amministratore', collaboratore: 'Collaboratore' };
+D.isAdmin = () => D.user?.role === 'admin';
+
+// "2M" (formato di PHP) → "2 MB"
+D.phpSize = (v) => String(v || '?').replace(/^(\d+)\s*([KMG])$/i, (_, n, u) => `${n} ${u.toUpperCase()}B`);
+
+D.size = (b) => (b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} KB` : `${(b / 1048576).toFixed(1).replace('.', ',')} MB`);
+D.hours = (h) => {
+  const n = Number(h) || 0;
+  const hh = Math.floor(n);
+  const mm = Math.round((n - hh) * 60);
+  return mm ? `${hh} h ${String(mm).padStart(2, '0')}` : `${hh} h`;
+};
 
 D.statusBadge = (s) => D.h('span', { class: `badge ${s}` }, D.STATUS[s] || s);
 
@@ -227,9 +257,12 @@ D.layout = function (meta, page) {
         navLink('/progetti', 'Progetti', 'progetti'),
         navLink('/clienti', 'Clienti', 'clienti'),
         navLink('/scadenze', 'Scadenze', 'scadenze', D.overdue),
+        navLink('/calendario', 'Calendario', 'calendario'),
         navLink('/impostazioni', 'Impostazioni', 'impostazioni')),
+      D.h('button', { class: 'search-trigger', type: 'button', onclick: () => D.palette() },
+        D.h('span', {}, 'Cerca…'), D.h('kbd', {}, navigator.platform.includes('Mac') ? '⌘K' : 'Ctrl K')),
       D.h('div', { class: 'side-foot' },
-        D.h('span', {}, D.user.name),
+        D.h('span', {}, D.user.name, D.h('small', {}, D.ROLE[D.user.role] || '')),
         D.h('button', { type: 'button', onclick: D.logout }, 'Esci'))),
     D.h('main', { class: 'main' },
       D.h('header', { class: 'top' },
@@ -238,6 +271,7 @@ D.layout = function (meta, page) {
         D.h('h1', {}, meta.title),
         D.h('div', { class: 'spacer' }),
         meta.actions || null),
+      D.h('div', { class: 'print-head' }, D.h('b', {}, D.studioName || D.appName), ` · ${meta.title} · stampato il ${D.date(D.today())}`),
       page)));
   document.title = `${meta.title} · ${D.appName}`;
 };
@@ -256,6 +290,7 @@ D.boot = async function () {
   D.csrf = me.csrf;
   D.appName = me.app_name || 'DOMUS';
   D.studioName = me.studio_name || '';
+  D.limits = me.upload || {};
   D.user = me.user;
   app.classList.remove('booting');
   app.removeAttribute('aria-busy');
@@ -301,6 +336,42 @@ D.authScreen = function (setup) {
   document.title = D.appName;
   setTimeout(() => form.querySelector('input')?.focus(), 30);
 };
+
+// ---------- ricerca rapida (⌘K / Ctrl K) ----------
+
+D.palette = function () {
+  if (document.querySelector('.palette')) return;
+  const input = D.h('input', { type: 'search', placeholder: 'Cerca progetti, clienti, pratiche, documenti…', 'aria-label': 'Cerca' });
+  const list = D.h('ul', { class: 'palette-list', role: 'listbox' });
+  let items = [];
+  let sel = 0;
+  let timer;
+  const LABEL = { progetto: 'Progetto', cliente: 'Cliente', pratica: 'Pratica', documento: 'Documento' };
+  const draw = () => list.replaceChildren(...(items.length ? items.map((r, i) => D.h('li', {
+    class: i === sel ? 'on' : '', role: 'option', 'aria-selected': String(i === sel),
+    onmousemove: () => { if (sel !== i) { sel = i; draw(); } }, onclick: () => open(r),
+  }, D.h('span', { class: 'pal-type' }, LABEL[r.type] || r.type), D.h('span', { class: 'pal-title' }, r.title), D.h('span', { class: 'pal-meta' }, r.meta || '')))
+    : [D.h('li', { class: 'pal-empty' }, input.value.trim().length < 2 ? 'Scrivi almeno due lettere' : 'Nessun risultato')]));
+  const open = (r) => { close(); D.go(r.href); };
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      try { items = await D.get(`search&q=${encodeURIComponent(input.value)}`); } catch { items = []; }
+      sel = 0; draw();
+    }, 150);
+  });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); sel = Math.min(sel + 1, items.length - 1); draw(); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); sel = Math.max(sel - 1, 0); draw(); }
+    if (e.key === 'Enter' && items[sel]) open(items[sel]);
+  });
+  const close = D.modal('Cerca', D.h('div', { class: 'palette' }, input, list));
+  draw();
+};
+
+document.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k' && D.user) { e.preventDefault(); D.palette(); }
+});
 
 window.addEventListener('hashchange', () => D.render());
 document.addEventListener('DOMContentLoaded', () => D.boot());

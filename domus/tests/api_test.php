@@ -179,6 +179,155 @@ check('progetto eliminato', $s === 404);
 [$s, $all] = call('GET', 'tasks&filter=tutte');
 check('le scadenze del progetto spariscono con lui', count($all) === 1 && $all[0]['title'] === 'Rinnovo assicurazione studio', $all);
 
+// ================= fase 2 =================
+function upload(int $projectId, array $files, string $category = 'documento'): array
+{
+    global $base, $jar, $csrf;
+    $ch = curl_init("$base/api.php?r=projects/$projectId/files");
+    $post = ['category' => $category];
+    foreach ($files as $i => [$path, $name]) {
+        $post["files[$i]"] = new CURLFile($path, '', $name);
+    }
+    curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $post, CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => ['X-Requested-With: domus', "X-CSRF-Token: $csrf"], CURLOPT_COOKIEJAR => $jar, CURLOPT_COOKIEFILE => $jar]);
+    $raw = (string) curl_exec($ch);
+    return [curl_getinfo($ch, CURLINFO_RESPONSE_CODE), json_decode($raw, true)];
+}
+function download(int $id, bool $inline = false): array
+{
+    global $base, $jar;
+    $ch = curl_init("$base/api.php?r=files/$id" . ($inline ? '&inline=1' : ''));
+    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_HEADER => true, CURLOPT_COOKIEJAR => $jar, CURLOPT_COOKIEFILE => $jar]);
+    $raw = (string) curl_exec($ch);
+    $hs = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+    return [curl_getinfo($ch, CURLINFO_RESPONSE_CODE), substr($raw, 0, $hs), substr($raw, $hs)];
+}
+
+[$s, $r] = call('POST', 'projects', ['title' => 'Casa sul lago', 'fee' => '20000', 'city' => 'Bracciano']);
+$p2id = $r['id'];
+
+// documenti
+$tmp = sys_get_temp_dir();
+file_put_contents("$tmp/pianta.pdf", "%PDF-1.4 finto");
+file_put_contents("$tmp/foto.png", base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='));
+file_put_contents("$tmp/virus.php", '<?php echo 1;');
+[$s, $r] = upload($p2id, [["$tmp/pianta.pdf", 'Pianta piano terra.pdf'], ["$tmp/foto.png", 'Sopralluogo 1.png']], 'tavola');
+check('caricamento di più documenti', $s === 200 && count($r['ids']) === 2, $r);
+[$fid, $imgId] = $r['ids'];
+[$s, $r] = upload($p2id, [["$tmp/virus.php", 'virus.php']]);
+check('file .php rifiutato', $s === 422, $r);
+[$s, $r] = upload($p2id, [["$tmp/pianta.pdf", '../../etc/passwd.pdf']]);
+[$s, $p] = call('GET', "projects/$p2id");
+check('nome con percorso ripulito', in_array('passwd.pdf', array_column($p['files'], 'name'), true), array_column($p['files'], 'name'));
+check('anteprima solo per immagini', count(array_filter($p['files'], fn ($f) => $f['preview'])) === 1);
+[$s, $h, $body] = download($fid);
+check('download del documento', $s === 200 && $body === '%PDF-1.4 finto' && str_contains($h, 'attachment'), $h);
+[$s, $h] = download($imgId, true);
+check('immagine in anteprima (inline)', $s === 200 && str_contains($h, 'inline') && str_contains($h, 'image/png'));
+[$s] = call('PUT', "files/$fid", ['category' => 'pratica', 'name' => 'Pianta PT']);
+[$s, $p] = call('GET', "projects/$p2id");
+$f = array_values(array_filter($p['files'], fn ($x) => $x['id'] === $fid))[0];
+check('rinomina mantiene l\'estensione', $f['name'] === 'Pianta PT.pdf' && $f['category'] === 'pratica', $f);
+
+// pratiche
+[$s, $r] = call('POST', 'permits', ['project_id' => $p2id, 'kind' => 'CILA', 'status' => 'depositata', 'protocol' => '2026/1234', 'authority' => 'Comune di Bracciano']);
+check('pratica creata', $s === 200);
+$permitId = $r['id'];
+[$s] = call('POST', 'permits', ['project_id' => $p2id, 'kind' => 'Inventata']);
+check('tipo di pratica non valido', $s === 422);
+[$s, $d] = call('GET', 'dashboard');
+check('pratiche in attesa in panoramica', count($d['permits']) === 1 && $d['permits'][0]['filed_at'] === date('Y-m-d'), $d['permits']);
+[$s] = call('PUT', "permits/$permitId", ['kind' => 'CILA', 'status' => 'approvata', 'protocol' => '2026/1234', 'filed_at' => date('Y-m-d')]);
+[$s, $p] = call('GET', "projects/$p2id");
+check('pratica approvata con data', $p['permits'][0]['status'] === 'approvata' && $p['permits'][0]['approved_at'] === date('Y-m-d'));
+
+// economia
+[$s] = call('POST', 'payments', ['project_id' => $p2id, 'description' => 'Acconto 30%', 'amount' => '6.000', 'due_date' => date('Y-m-d', strtotime('-10 days')), 'invoiced_at' => date('Y-m-d', strtotime('-9 days'))]);
+[$s, $pay] = call('POST', 'payments', ['project_id' => $p2id, 'description' => 'Secondo acconto', 'amount' => '6000']);
+[$s] = call('PUT', "payments/{$pay['id']}", ['paid_at' => date('Y-m-d')]);
+[$s] = call('POST', 'payments', ['project_id' => $p2id, 'description' => 'Zero', 'amount' => '0']);
+check('importo zero rifiutato', $s === 422);
+[$s, $p] = call('GET', "projects/$p2id");
+$sum = $p['payments']['summary'];
+check('riepilogo economico', $sum['fee'] == 20000 && $sum['planned'] == 12000 && $sum['invoiced'] == 12000 && $sum['paid'] == 6000 && $sum['to_collect'] == 6000 && $sum['unplanned'] == 8000, $sum);
+[$s, $d] = call('GET', 'dashboard');
+check('da incassare in panoramica', $d['finance']['to_collect'] == 6000 && $d['finance']['paid_year'] == 6000, $d['finance']);
+
+// ore
+[$s] = call('POST', 'hours', ['project_id' => $p2id, 'hours' => '1:30', 'description' => 'Rilievo']);
+[$s] = call('POST', 'hours', ['project_id' => $p2id, 'hours' => '2,5']);
+[$s] = call('POST', 'hours', ['project_id' => $p2id, 'hours' => '30']);
+check('ore oltre 24 rifiutate', $s === 422);
+[$s, $p] = call('GET', "projects/$p2id");
+check('totale ore', $p['hours']['total'] == 4.0, $p['hours']['total']);
+
+// calendario e ricerca
+call('POST', 'tasks', ['title' => 'Verifica lago', 'project_id' => $p2id, 'due_date' => date('Y-m-d')]);
+[$s, $ev] = call('GET', 'calendar&from=' . date('Y-m-01') . '&to=' . date('Y-m-t'));
+$types = array_unique(array_column($ev, 'type'));
+check('calendario con scadenze, pratiche e rate', in_array('task', $types) && in_array('permit', $types) && in_array('payment', $types), $types);
+[$s, $res] = call('GET', 'search&q=1234');
+check('ricerca per protocollo', count($res) === 1 && $res[0]['type'] === 'pratica', $res);
+[$s, $res] = call('GET', 'search&q=lago');
+check('ricerca progetti', $res[0]['type'] === 'progetto' && $res[0]['title'] === 'Casa sul lago', $res);
+
+// collaboratori e ruoli
+[$s, $r] = call('POST', 'users', ['name' => 'Luca Verdi', 'email' => 'luca@studio.it', 'password' => 'passwordluca1', 'role' => 'collaboratore']);
+check('collaboratore creato', $s === 200, $r);
+$lucaId = $r['id'];
+[$s] = call('POST', 'users', ['name' => 'Doppio', 'email' => 'LUCA@studio.it', 'password' => 'passwordluca1']);
+check('email duplicata rifiutata', $s === 422);
+[$s, $list] = call('GET', 'users');
+check('elenco utenti', count($list) === 2);
+$adminId = array_values(array_filter($list, fn ($u) => $u['role'] === 'admin'))[0]['id'];
+[$s, $r] = call('PUT', "users/$adminId", ['role' => 'collaboratore']);
+check('non si può togliere l\'ultimo amministratore', $s === 422, $r);
+
+// entra come collaboratore
+$adminCsrf = $csrf;
+call('POST', 'auth/logout');
+[$s, $r] = call('POST', 'auth/login', ['email' => 'luca@studio.it', 'password' => 'passwordluca1']);
+$csrf = $r['csrf'] ?? '';
+check('accesso collaboratore', $s === 200 && $r['user']['role'] === 'collaboratore');
+[$s, $p] = call('GET', "projects/$p2id");
+check('il collaboratore non vede l\'economia', !isset($p['payments']) && !array_key_exists('fee', $p), array_keys($p));
+[$s] = call('POST', 'payments', ['project_id' => $p2id, 'description' => 'X', 'amount' => '10']);
+check('il collaboratore non crea rate (403)', $s === 403);
+[$s] = call('GET', 'users');
+check('il collaboratore non vede gli utenti (403)', $s === 403);
+[$s] = call('GET', 'export');
+check('il collaboratore non scarica il backup (403)', $s === 403);
+[$s, $d] = call('GET', 'dashboard');
+check('panoramica senza economia', $d['finance'] === null);
+[$s] = call('PUT', "projects/$p2id", ['title' => 'Casa sul lago (rev.)', 'city' => 'Bracciano', 'fee' => '1']);
+[$s, $p] = call('GET', "projects/$p2id");
+check('il collaboratore modifica il progetto', $p['title'] === 'Casa sul lago (rev.)');
+[$s, $hid] = call('POST', 'hours', ['project_id' => $p2id, 'hours' => '3']);
+[$s, $p] = call('GET', "projects/$p2id");
+$adminHour = array_values(array_filter($p['hours']['items'], fn ($x) => $x['user_name'] === 'Chiara Pucci'))[0]['id'];
+[$s] = call('DELETE', "hours/$adminHour");
+check('il collaboratore non elimina le ore altrui', $s === 403);
+[$s] = call('DELETE', "hours/{$hid['id']}");
+check('il collaboratore elimina le proprie ore', $s === 200);
+
+// torna amministratore: l'onorario non è stato toccato dal collaboratore
+call('POST', 'auth/logout');
+[$s, $r] = call('POST', 'auth/login', ['email' => 'chiara@studio.it', 'password' => 'unapasswordlunga']);
+$csrf = $r['csrf'] ?? '';
+[$s, $p] = call('GET', "projects/$p2id");
+check('onorario protetto dalle modifiche del collaboratore', $p['fee'] == 20000, $p['fee'] ?? null);
+[$s] = call('PUT', "users/$lucaId", ['active' => false]);
+call('POST', 'auth/logout');
+[$s] = call('POST', 'auth/login', ['email' => 'luca@studio.it', 'password' => 'passwordluca1']);
+check('utente disattivato non entra', $s === 401);
+[$s, $r] = call('POST', 'auth/login', ['email' => 'chiara@studio.it', 'password' => 'unapasswordlunga']);
+$csrf = $r['csrf'] ?? '';
+
+// eliminando il progetto spariscono anche i file
+[$s] = call('DELETE', "projects/$p2id");
+[$s] = download($fid);
+check('file eliminati con il progetto', $s === 404);
+
 // profilo
 [$s, $r] = call('PUT', 'auth/profile', ['name' => 'Chiara P.', 'current_password' => 'sbagliata', 'new_password' => 'nuovapassword123']);
 check('cambio password con password attuale errata rifiutato', $s === 422);

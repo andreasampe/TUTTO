@@ -39,7 +39,7 @@ final class Projects
     }
 
     /** @return array<string,mixed> */
-    public static function get(int $id): array
+    public static function get(int $id, ?array $user = null): array
     {
         $p = Db::one(
             'SELECT p.*, c.name AS client_name, c.phone AS client_phone, c.email AS client_email
@@ -56,6 +56,15 @@ final class Projects
              WHERE j.project_id = ? ORDER BY j.entry_date DESC, j.id DESC',
             [$id]
         );
+        $p['permits'] = Permits::forProject($id);
+        $p['files'] = Files::forProject($id);
+        $p['hours'] = Hours::forProject($id);
+        if (Auth::isAdmin($user)) {
+            $p['payments'] = Payments::forProject($id);
+        } else {
+            // I dati economici sono riservati all'amministratore.
+            unset($p['fee']);
+        }
         return $p;
     }
 
@@ -68,9 +77,12 @@ final class Projects
         return sprintf('%s-%03d', $year, $n);
     }
 
-    public static function create(array $in): int
+    public static function create(array $in, ?array $user = null): int
     {
         $data = self::clean($in);
+        if (!Auth::isAdmin($user)) {
+            unset($data['fee']);
+        }
         $data['code'] = Validate::text($in['code'] ?? null, 20) ?? self::nextCode();
         if (Db::value('SELECT 1 FROM projects WHERE code = ?', [$data['code']])) {
             throw new HttpError(422, 'Codice già usato da un altro progetto', ['code' => 'Già usato']);
@@ -88,10 +100,13 @@ final class Projects
         });
     }
 
-    public static function update(int $id, array $in): void
+    public static function update(int $id, array $in, ?array $user = null): void
     {
         self::exists($id);
         $data = self::clean($in);
+        if (!Auth::isAdmin($user)) {
+            unset($data['fee']);
+        }
         if (isset($in['code'])) {
             $code = Validate::required($in['code'], 'code', 20);
             if (Db::value('SELECT 1 FROM projects WHERE code = ? AND id != ?', [$code, $id])) {
@@ -106,6 +121,7 @@ final class Projects
     {
         self::exists($id);
         Db::run('DELETE FROM projects WHERE id = ?', [$id]);
+        Files::deleteProjectFolder($id);
     }
 
     public static function exists(int $id): void
