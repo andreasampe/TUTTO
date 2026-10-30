@@ -1,1 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="#1d1c1a"/><path d="M7 25V14l9-7 9 7v11" fill="none" stroke="#f4f1ea" stroke-width="2.4" stroke-linejoin="round"/><path d="M13 25v-6h6v6" fill="none" stroke="#c0623b" stroke-width="2.4"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- DOMUS: la D che contiene la casa, su griglia di costruzione -->
+  <rect width="100" height="100" rx="22" fill="#0e0e0d"/>
+  <g stroke="#fff" stroke-opacity=".32" stroke-width=".22" fill="none">
+    <path d="M21 10V86M25.4 14V82M50 10V86M78.5 10V86M14 18H86M14 50.4H86M14 78.5H86"/>
+    <path d="M21 78.5L78.5 18M21 18L78.5 78.5"/>
+    <circle cx="50" cy="50.4" r="24.7"/>
+    <path d="M50 18A30 30 0 0 1 79 48"/>
+  </g>
+  <g stroke="#fff" stroke-width=".5" stroke-opacity=".8">
+    <path d="M19.5 18H22.5M21 16.5V19.5M77 18H80M78.5 16.5V19.5M19.5 78.5H22.5M21 77V80M77 78.5H80M78.5 77V80"/>
+  </g>
+  <g stroke="#f4f2ee" stroke-width="3.7" fill="none" stroke-linejoin="miter">
+    <path d="M25.4 25.4H55.5A23 25 0 0 1 59.5 75"/>
+    <path d="M32.7 78.5V50.4L47.2 40.3L59.5 50.4V76.6"/>
+  </g>
+</svg>

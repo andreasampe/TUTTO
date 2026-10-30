@@ -1,0 +1,4 @@
+domus-data/
+*.sqlite
+*.sqlite-*
+.DS_Store
