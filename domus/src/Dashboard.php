@@ -21,21 +21,23 @@ final class Dashboard
             'permits' => Permits::pending(),
             'finance' => Auth::isAdmin($user) ? Payments::studioSummary() : null,
             'hours_week' => (float) Db::value(
-                "SELECT COALESCE(SUM(hours), 0) FROM hours WHERE user_id = ? AND work_date >= date('now','localtime','-6 days','weekday 1')",
-                [$user['id'] ?? 0]
+                'SELECT COALESCE(SUM(hours), 0) FROM hours WHERE user_id = ? AND work_date >= ?',
+                [$user['id'] ?? 0, App::today(1 - (int) date('N'))] // dal lunedì di questa settimana
             ),
             'counts' => array_map('intval', $counts ?? []),
             'clients' => (int) Db::value('SELECT COUNT(*) FROM clients'),
             'overdue' => Db::all(
                 "SELECT t.*, p.code AS project_code, p.title AS project_title FROM tasks t
                  LEFT JOIN projects p ON p.id = t.project_id
-                 WHERE t.done = 0 AND t.due_date < date('now','localtime') ORDER BY t.due_date LIMIT 20"
+                 WHERE t.done = 0 AND t.due_date < ? ORDER BY t.due_date LIMIT 20",
+                [App::today()]
             ),
             'upcoming' => Db::all(
                 "SELECT t.*, p.code AS project_code, p.title AS project_title FROM tasks t
                  LEFT JOIN projects p ON p.id = t.project_id
-                 WHERE t.done = 0 AND t.due_date BETWEEN date('now','localtime') AND date('now','localtime','+14 days')
-                 ORDER BY t.due_date LIMIT 20"
+                 WHERE t.done = 0 AND t.due_date BETWEEN ? AND ?
+                 ORDER BY t.due_date LIMIT 20",
+                [App::today(), App::today(14)]
             ),
             'active' => array_slice(Projects::list('in_corso'), 0, 6),
             'journal' => Db::all(

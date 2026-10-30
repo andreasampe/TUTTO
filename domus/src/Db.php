@@ -243,6 +243,13 @@ final class Db
 
     public static function insert(string $table, array $data): int
     {
+        // Le colonne created_at / updated_at hanno DEFAULT (datetime('now')), cioè l'ora UTC:
+        // le migrazioni non si toccano, quindi l'ora nel fuso dello studio la mette PHP.
+        foreach (['created_at', 'updated_at'] as $col) {
+            if (!array_key_exists($col, $data) && in_array($col, self::columns($table), true)) {
+                $data[$col] = App::now();
+            }
+        }
         $cols = array_keys($data);
         $sql = sprintf(
             'INSERT INTO %s (%s) VALUES (%s)',
@@ -252,6 +259,13 @@ final class Db
         );
         self::run($sql, array_values($data));
         return (int) self::pdo()->lastInsertId();
+    }
+
+    /** @return list<string> nomi delle colonne della tabella (letti una volta per richiesta) */
+    private static function columns(string $table): array
+    {
+        static $cache = [];
+        return $cache[$table] ??= array_column(self::all("PRAGMA table_info($table)"), 'name');
     }
 
     public static function update(string $table, int $id, array $data): int

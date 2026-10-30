@@ -9,19 +9,20 @@ final class Tasks
     /** @return list<array<string,mixed>> */
     public static function list(string $filter = 'aperte'): array
     {
-        $where = match ($filter) {
-            'aperte' => 't.done = 0',
-            'scadute' => "t.done = 0 AND t.due_date < date('now','localtime')",
-            'settimana' => "t.done = 0 AND t.due_date <= date('now','localtime','+7 days')",
-            'fatte' => 't.done = 1',
-            'tutte' => '1 = 1',
+        [$where, $params] = match ($filter) {
+            'aperte' => ['t.done = 0', []],
+            'scadute' => ['t.done = 0 AND t.due_date < ?', [App::today()]],
+            'settimana' => ['t.done = 0 AND t.due_date <= ?', [App::today(7)]],
+            'fatte' => ['t.done = 1', []],
+            'tutte' => ['1 = 1', []],
             default => throw new HttpError(422, 'Filtro non valido'),
         };
         $order = $filter === 'fatte' ? 't.done_at DESC' : 't.due_date IS NULL, t.due_date, t.id';
         return Db::all(
             "SELECT t.*, p.code AS project_code, p.title AS project_title
              FROM tasks t LEFT JOIN projects p ON p.id = t.project_id
-             WHERE $where ORDER BY $order LIMIT 500"
+             WHERE $where ORDER BY $order LIMIT 500",
+            $params
         );
     }
 

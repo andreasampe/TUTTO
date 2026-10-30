@@ -15,8 +15,9 @@ final class Users
         return Db::all(
             "SELECT u.id, u.name, u.email, u.role, u.active, u.created_at,
                     (SELECT COALESCE(SUM(h.hours), 0) FROM hours h WHERE h.user_id = u.id
-                       AND h.work_date >= date('now','localtime','start of month')) AS hours_month
-             FROM users u ORDER BY u.active DESC, u.name COLLATE NOCASE"
+                       AND h.work_date >= ?) AS hours_month
+             FROM users u ORDER BY u.active DESC, u.name COLLATE NOCASE",
+            [date('Y-m-01')]
         );
     }
 

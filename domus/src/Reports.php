@@ -25,11 +25,13 @@ final class Reports
             'hours_month' => array_map(fn ($m) => $hoursMonth[$m] ?? 0, $months),
             'hours_projects' => Db::all(
                 "SELECT p.id, p.code, p.title, SUM(h.hours) AS hours FROM hours h JOIN projects p ON p.id = h.project_id
-                 WHERE h.work_date >= date('now','localtime','-90 days') GROUP BY p.id ORDER BY hours DESC LIMIT 8"
+                 WHERE h.work_date >= ? GROUP BY p.id ORDER BY hours DESC LIMIT 8",
+                [App::today(-90)]
             ),
             'hours_people' => Db::all(
                 "SELECT u.id, u.name, SUM(h.hours) AS hours FROM hours h JOIN users u ON u.id = h.user_id
-                 WHERE h.work_date >= date('now','localtime','-30 days') GROUP BY u.id ORDER BY hours DESC"
+                 WHERE h.work_date >= ? GROUP BY u.id ORDER BY hours DESC",
+                [App::today(-30)]
             ),
             'status' => Db::all('SELECT status, COUNT(*) AS n FROM projects GROUP BY status'),
             'permits' => Db::one(

@@ -84,6 +84,7 @@ Webapp gestionale per lo studio di architettura (Chiara Pucci, architetto), nata
 - **PHP 8.1+ senza framework né Composer**, autonomo (non è un plugin WordPress). In Local sta in `Local Sites/DOMUS/app/public/domus/` e si apre su `http://domus.local/domus/`.
 - **Dati**: SQLite in `domus-data/domus.sqlite`, fuori dalla cartella pubblica (percorso in `config.php`, sovrascrivibile con la variabile d'ambiente `DOMUS_DATA_DIR`). Esiste un export JSON completo (`api.php?r=export`).
 - **Migrazioni**: `src/Db.php`, costante `MIGRATIONS`. Usano `PRAGMA user_version`. Non modificare le migrazioni esistenti, aggiungerne di nuove in coda.
+- **Date**: mai `date('now')`/`datetime('now')`/`'localtime'` nelle query. Passare `App::today($giorni)` o `App::now()` come parametri (fuso di `config.php`). `created_at`/`updated_at` li imposta `Db::insert`. Dettagli nel README, sezione *Date e fuso orario*.
 - **API**: unico punto d'ingresso `api.php?r=risorsa/id`. Si usa il parametro `r` per non dipendere da regole di riscrittura degli URL (Local usa nginx). Le rotte sono nel `match` di `api.php`.
 - **Logica**: una classe per area in `src/` (`Auth`, `Users`, `Clients`, `Projects` con fasi e diario, `Tasks`, `Files`, `Permits`, `Payments`, `Hours`, `Calendar`, `Search`, `Dashboard`, `Settings`, `Backup`, `Validate`). Gli errori sono `HttpError(status, messaggio, [campo => errore])`: l'interfaccia evidenzia il campo sbagliato.
 - **Sicurezza**:
@@ -142,7 +143,7 @@ Webapp gestionale per lo studio di architettura (Chiara Pucci, architetto), nata
 
 ### Come provare
 
-- `bash domus/tests/run.sh` avvia il server PHP integrato su un database temporaneo ed esegue i test dell'API: `tests/api_test.php` (89 controlli) e `tests/demo_test.php` (16 controlli: studio dimostrativo, statistiche, galleria, iCal, preventivo), tutti verdi alla consegna.
+- `bash domus/tests/run.sh` avvia il server PHP integrato su un database temporaneo ed esegue i test dell'API: `tests/api_test.php` (89 controlli), `tests/demo_test.php` (16 controlli: studio dimostrativo, statistiche, galleria, iCal, preventivo) e `tests/fuso_test.php` (9 controlli: date nel fuso dello studio anche quando la data UTC è diversa), tutti verdi alla consegna.
 - Schermate aggiornate in `domus/docs/schermate/` (20 immagini).
 - Per l'interfaccia: `php -S` su una cartella che contiene `domus/` (per simulare il percorso `/domus/` di Local) e Playwright (preinstallato nell'ambiente cloud).
 - In questo ambiente cloud **non si può avviare WordPress** (il codice esterno è bloccato) e **non c'è accesso ai siti esterni**.

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 $base = rtrim($argv[1] ?? 'http://127.0.0.1:8766', '/');
+date_default_timezone_set($argv[2] ?? 'Europe/Rome'); // lo stesso fuso del server
 $jar = tempnam(sys_get_temp_dir(), 'domus');
 $csrf = '';
 $passed = $failed = 0;

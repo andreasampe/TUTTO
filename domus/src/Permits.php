@@ -24,9 +24,10 @@ final class Permits
     {
         return Db::all(
             "SELECT pe.*, p.code AS project_code, p.title AS project_title,
-                    CAST(julianday('now','localtime') - julianday(pe.filed_at) AS INTEGER) AS days_waiting
+                    CAST(julianday(?) - julianday(pe.filed_at) AS INTEGER) AS days_waiting
              FROM permits pe JOIN projects p ON p.id = pe.project_id
-             WHERE pe.status IN ('depositata','integrazioni') ORDER BY pe.filed_at"
+             WHERE pe.status IN ('depositata','integrazioni') ORDER BY pe.filed_at",
+            [App::today()]
         );
     }
 

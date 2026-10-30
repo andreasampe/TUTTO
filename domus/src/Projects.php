@@ -184,7 +184,7 @@ final class Projects
             $data['notes'] = Validate::text($in['notes'], 2000);
         }
         Db::update('phases', $id, $data);
-        Db::run("UPDATE projects SET updated_at = datetime('now') WHERE id = ?", [$phase['project_id']]);
+        Db::run('UPDATE projects SET updated_at = ? WHERE id = ?', [App::now(), $phase['project_id']]);
     }
 
     public static function addPhase(int $projectId, array $in): int

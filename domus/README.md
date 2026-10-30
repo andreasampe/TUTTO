@@ -85,4 +85,10 @@ Si copiano due cartelle: `domus` (nella parte pubblica) e `domus-data` (un livel
 bash tests/run.sh
 ```
 
-Avvia DOMUS con il server PHP integrato su un database temporaneo e prova tutta l'API (105 controlli): accesso, ruoli, clienti, progetti, fasi, scadenze, diario, documenti, pratiche, economia, ore, calendario, ricerca, backup, protezioni, studio dimostrativo, statistiche, galleria, iCal e preventivo PDF.
+Avvia DOMUS con il server PHP integrato su un database temporaneo e prova tutta l'API (114 controlli): accesso, ruoli, clienti, progetti, fasi, scadenze, diario, documenti, pratiche, economia, ore, calendario, ricerca, backup, protezioni, studio dimostrativo, statistiche, galleria, iCal, preventivo PDF e fuso orario.
+
+### Date e fuso orario
+
+- Il fuso dello studio è in `config.php` (`timezone`, predefinito `Europe/Rome`). "Oggi" e "adesso" li calcola sempre PHP (`App::today()`, `App::now()`) e li passa alle query come parametri: `date('now')` di SQLite è in UTC e il modificatore `'localtime'` segue il fuso del server, non quello di `config.php`.
+- `created_at` e `updated_at` li scrive PHP (`Db::insert`) nel fuso dello studio. Il `DEFAULT (datetime('now'))` delle migrazioni (che restano invariate) vale solo come riserva ed è in UTC: i dati creati prima di questa correzione hanno quindi l'orario di creazione in UTC (un'ora indietro, due con l'ora legale).
+- `tests/fuso_test.php` avvia il server con un fuso la cui data, in quel momento, è diversa da quella UTC: simula le ore tra mezzanotte e l'1 a Roma.

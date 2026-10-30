@@ -14,6 +14,7 @@ return [
     // Durata della sessione di accesso, in secondi (12 ore).
     'session_lifetime' => 12 * 3600,
 
-    // Fuso orario dello studio.
-    'timezone' => 'Europe/Rome',
+    // Fuso orario dello studio. Vale per tutte le date e gli orari (anche quelli salvati nel database).
+    // La variabile d'ambiente DOMUS_TIMEZONE serve solo ai test.
+    'timezone' => getenv('DOMUS_TIMEZONE') ?: 'Europe/Rome',
 ];

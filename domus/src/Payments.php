@@ -44,7 +44,7 @@ final class Payments
         $year = date('Y');
         return [
             'to_collect' => (float) Db::value('SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoiced_at IS NOT NULL AND paid_at IS NULL'),
-            'to_invoice' => (float) Db::value("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoiced_at IS NULL AND due_date <= date('now','localtime')"),
+            'to_invoice' => (float) Db::value('SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoiced_at IS NULL AND due_date <= ?', [App::today()]),
             'paid_year' => (float) Db::value("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE paid_at LIKE ?", [$year . '-%']),
             'overdue' => Db::all(
                 "SELECT pa.*, p.code AS project_code, p.title AS project_title FROM payments pa JOIN projects p ON p.id = pa.project_id

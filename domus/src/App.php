@@ -33,6 +33,19 @@ final class App
         date_default_timezone_set(self::config('timezone'));
     }
 
+    /** Data di oggi (più $days giorni) nel fuso dello studio: le query la ricevono come parametro,
+     *  perché date('now') di SQLite è in UTC e 'localtime' segue il fuso del server, non config.php. */
+    public static function today(int $days = 0): string
+    {
+        return date('Y-m-d', strtotime("$days days"));
+    }
+
+    /** Data e ora attuali nel fuso dello studio, nel formato di created_at / updated_at. */
+    public static function now(): string
+    {
+        return date('Y-m-d H:i:s');
+    }
+
     public static function config(string $key): mixed
     {
         return self::$config[$key] ?? null;
