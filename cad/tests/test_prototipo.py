@@ -120,6 +120,41 @@ class Prototipo(unittest.TestCase):
         self.assertIn(2.00, letto)       # letto intero, cuscino compreso
         self.assertNotIn(0.40, letto)    # niente quota del solo cuscino
 
+    def test_pallini_con_il_trattino_verso_l_interno(self):
+        # il blocco _DOT ha un trattino: se la quota è al contrario, il trattino esce oltre il pallino
+        import math
+        esito = self.elabora()
+        doc = ezdxf.readfile(esito["elaborato"])
+        for d in doc.modelspace().query("DIMENSION"):
+            if d.get_measurement() < 0.3:
+                continue  # quote cortissime (spessore di un tramezzo): pallini fuori, come in AutoCAD
+            angolo = d.dxf.get("angle", 0)
+            u = (math.cos(math.radians(angolo)), math.sin(math.radians(angolo)))
+            pallini = [i for i in doc.blocks.get(d.dxf.geometry).query("INSERT") if i.dxf.name == "_DOT"]
+            self.assertEqual(len(pallini), 2)
+            primo = next(i for i in pallini if abs(((i.dxf.rotation - angolo - 180) + 180) % 360 - 180) < 1)
+            altro = next(i for i in pallini if i is not primo)
+            proiezione = lambda i: i.dxf.insert.x * u[0] + i.dxf.insert.y * u[1]  # noqa: E731
+            self.assertLess(proiezione(primo), proiezione(altro))  # trattino del primo verso destra = dentro
+
+    def test_muro_inclinato_solo_minima_e_massima(self):
+        doc = ezdxf.new("R2018", setup=True)
+        doc.header["$INSUNITS"] = 6
+        doc.layers.add("MURI")
+        msp = doc.modelspace()
+        # stanza larga 4 m in basso e 5 m in alto: il muro a destra è inclinato
+        for a, b in (((0, 0), (4, 0)), ((4, 0), (5, 4)), ((5, 4), (0, 4)), ((0, 4), (0, 0)),
+                     ((-0.3, -0.3), (4.2, -0.3)), ((4.2, -0.3), (5.3, 4.3)), ((5.3, 4.3), (-0.3, 4.3)), ((-0.3, 4.3), (-0.3, -0.3))):
+            msp.add_line(a, b, dxfattribs={"layer": "MURI"})
+        percorso = self.dir / "inclinata.dxf"
+        doc.saveas(percorso)
+        esito = elabora(str(percorso), str(self.dir / "inclinata"), ora="x", layer_muri={"MURI"})
+        orizzontali = sorted(round(q["misura"], 1) for q in esito["quote"]
+                             if q["lato"] == "interno" and abs(q["angolo"]) < 1)
+        self.assertEqual(len(orizzontali), 2, orizzontali)   # niente quote intermedie
+        self.assertLess(orizzontali[0], 4.2)                   # vicino alla minima (4,00 in basso)
+        self.assertGreater(orizzontali[1], 4.8)                # vicino alla massima (5,00 in alto)
+
     def test_profilo_riconosciuto_in_automatico(self):
         rif = ezdxf.new("R2018", setup=True)
         rif.header["$INSUNITS"] = 6

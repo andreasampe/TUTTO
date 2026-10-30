@@ -40,7 +40,7 @@ Indicazioni sue, dal documento master:
   - non dichiarare completato ciò che non è testato su file reali.
 - **Stato (30/10/2026):**
   - Fase 0 fatta (`cad/ANALISI_TECNICA.md`);
-  - Fase 1, prototipo in `cad/domus_cad/` con Python e ezdxf: 20 test (`python -m unittest discover -s tests`) e **prova su una pianta reale** (`REF.OPCION 2`, progetto spagnolo Vivienda Moya; DWG e DXF di Andrea sono sul ramo `main`). Risultato in `cad/prove/`;
+  - Fase 1, prototipo in `cad/domus_cad/` con Python e ezdxf: 22 test (`python -m unittest discover -s tests`) e **prova su una pianta reale** (`REF.OPCION 2`, progetto spagnolo Vivienda Moya; DWG e DXF di Andrea sono sul ramo `main`). Risultato in `cad/prove/`;
   - la prima versione si apre in AutoCAD, ma ad Andrea le quote non andavano bene. Le vuole come il layer `01Cotas 1` del file `03_BASICO`: in metri, con pallino, e anche **dentro le stanze**;
   - fatta la seconda versione (`domus_cad/interne.py`: luci nette da muro a muro, muri campiti come massa, porte chiuse con una chiusura morfologica);
   - terza versione, su richiesta di Andrea:
@@ -54,7 +54,11 @@ Indicazioni sue, dal documento master:
     - letto + cuscino = una quota;
     - quote perpendicolari ai muri inclinati;
     - linea spostata lungo il tratto;
-    - testo mai oltre i pallini.
+    - testo mai oltre i pallini;
+  - sesta versione:
+    - stanze con muro inclinato: solo quota minima e massima;
+    - pallini `_DOT` con il trattino verso l'interno (la linea "sbordava" quando i punti erano invertiti);
+    - testi che evitano anche il disegno esistente.
 
     Da riprovare in AutoCAD;
   - manca l'xref `00 REF_VIVIENDA MOYA`;

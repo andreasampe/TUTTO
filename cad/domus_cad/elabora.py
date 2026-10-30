@@ -14,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 
 import ezdxf
+import ezdxf.bbox
 import numpy as np
 from ezdxf import recover
 
@@ -136,7 +137,16 @@ def elabora(origine: str, uscita: str, *, unita: str | None = None, scala: int |
         elenco.append({"alternative": [{"base": ((p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2), "p1": p1, "p2": p2,
                                         "angolo": q.angolo, "misura": m} for p1, p2, m in posti],
                        "testo": scritta(q.misura)})
-    scelte = testi.disponi(elenco, t["altezza"], t["orizzontale"], t["larghezza"])
+    seg_disegno, masse_disegno = interne.geometria(doc, None, 0.01 / m_per_u, m_per_u)
+    scritte = []
+    for e in doc.modelspace().query("TEXT MTEXT"):
+        try:
+            b = ezdxf.bbox.extents([e])
+            scritte.append((b.extmin.x, b.extmin.y, b.extmax.x, b.extmax.y))
+        except Exception:
+            continue
+    ingombro = testi.Ingombro(seg_disegno, masse_disegno, scritte, passo=0.02 / m_per_u)
+    scelte = testi.disponi(elenco, t["altezza"], t["orizzontale"], t["larghezza"], ingombro)
     posizioni = [pos for _, pos in scelte]
     for k, q in enumerate(luci):  # la quota interna va nella posizione scelta lungo il suo tratto
         alt = elenco[len(esterne) + k]["alternative"][scelte[len(esterne) + k][0]]

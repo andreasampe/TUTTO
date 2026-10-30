@@ -8,7 +8,8 @@ Per ogni posizione della linea il testo può stare:
    linea fino al testo, e la linea andrebbe oltre il punto;
 3. subito sopra o sotto la linea, accanto ad essa, così si capisce a quale quota appartiene.
 
-Si sceglie la combinazione con meno sovrapposizioni con testi e linee già disposti. Le quote
+Si sceglie la combinazione con meno sovrapposizioni con testi e linee già disposti e con il
+disegno esistente (linee, campiture, scritte: vedi `Ingombro`). Le quote
 più lunghe si dispongono per prime. Le misure non cambiano: cambia solo dove si disegnano.
 """
 from __future__ import annotations
@@ -18,6 +19,49 @@ import math
 LARGHEZZA_CARATTERE = 0.9   # larghezza media di una cifra rispetto all'altezza (con margine per i caratteri larghi)
 MARGINE = 0.3               # spazio libero attorno al testo, rispetto all'altezza
 PALLINO = 0.8               # spazio lasciato libero alle estremità per i pallini, rispetto all'altezza
+
+
+class Ingombro:
+    """Raster del disegno esistente: dice quanto un rettangolo è occupato da linee, campiture e scritte."""
+
+    def __init__(self, segmenti, poligoni, rettangoli, passo: float):
+        import numpy as np
+        from PIL import Image, ImageDraw
+
+        punti = [(x, y) for x1, y1, x2, y2 in segmenti for x, y in ((x1, y1), (x2, y2))] + \
+                [pt for pol in poligoni for pt in pol] + [(r[0], r[1]) for r in rettangoli] + [(r[2], r[3]) for r in rettangoli]
+        if not punti:
+            self.integrale = None
+            return
+        xs, ys = [p[0] for p in punti], [p[1] for p in punti]
+        self.x0, self.y0 = min(xs), min(ys)
+        self.passo = max(passo, max(max(xs) - self.x0, max(ys) - self.y0) / 4000)
+        w, h = int((max(xs) - self.x0) / self.passo) + 2, int((max(ys) - self.y0) / self.passo) + 2
+        img = Image.new("L", (w, h), 0)
+        d = ImageDraw.Draw(img)
+        px = lambda x, y: ((x - self.x0) / self.passo, (y - self.y0) / self.passo)  # noqa: E731
+        for pol in poligoni:
+            d.polygon([px(*pt) for pt in pol], fill=1)
+        for x1, y1, x2, y2 in segmenti:
+            d.line([px(x1, y1), px(x2, y2)], fill=1, width=1)
+        for r in rettangoli:
+            d.rectangle([px(r[0], r[1]), px(r[2], r[3])], fill=1)
+        a = np.asarray(img, dtype=np.int32)
+        self.integrale = np.pad(a.cumsum(0).cumsum(1), ((1, 0), (1, 0)))
+
+    def frazione(self, box) -> float:
+        if self.integrale is None:
+            return 0.0
+        h, w = self.integrale.shape[0] - 1, self.integrale.shape[1] - 1
+        c0 = min(max(int((box[0] - self.x0) / self.passo), 0), w)
+        c1 = min(max(int((box[2] - self.x0) / self.passo) + 1, 0), w)
+        r0 = min(max(int((box[1] - self.y0) / self.passo), 0), h)
+        r1 = min(max(int((box[3] - self.y0) / self.passo) + 1, 0), h)
+        area = (c1 - c0) * (r1 - r0)
+        if area <= 0:
+            return 0.0
+        I = self.integrale
+        return float(I[r1, c1] - I[r0, c1] - I[r1, c0] + I[r0, c0]) / area
 
 
 def testo(misura: float, fattore: float, decimali: int) -> str:
@@ -67,8 +111,8 @@ def _linea(base, p1, p2, angolo):
     return (base[0] + u[0] * t1, base[1] + u[1] * t1), (base[0] + u[0] * t2, base[1] + u[1] * t2)
 
 
-def disponi(quote: list[dict], altezza: float, orizzontale: bool, fattore_larghezza: float = 1.0
-            ) -> list[tuple[int, tuple[float, float] | None]]:
+def disponi(quote: list[dict], altezza: float, orizzontale: bool, fattore_larghezza: float = 1.0,
+            ingombro: Ingombro | None = None) -> list[tuple[int, tuple[float, float] | None]]:
     """Per ogni quota {"alternative": [{"base", "p1", "p2", "angolo"}, ...], "testo"} restituisce
     (indice della posizione scelta, posizione del testo oppure None se il testo resta al centro)."""
     h = altezza
@@ -94,9 +138,10 @@ def disponi(quote: list[dict], altezza: float, orizzontale: bool, fattore_larghe
             di_lato = abs((sc[2] - sc[0]) * n[0]) + abs((sc[3] - sc[1]) * n[1])
             libero = (lung - lungo_linea) / 2 - PALLINO * h  # quanto il testo può scorrere dal centro
             entra = libero >= 0
-            scorrimenti = [0.0] + ([s * f * libero for f in (0.5, 1.0) for s in (1, -1)] if entra else [])
+            scorrimenti = [0.0] + ([s * f * libero for f in (0.25, 0.5, 0.75, 1.0) for s in (1, -1)] if entra else [])
             accanto = di_lato / 2 + 0.25 * h
-            prove = [(t, o) for t in scorrimenti for o in ((0.0, accanto, -accanto) if entra else (accanto, -accanto))]
+            lati = (accanto, -accanto, 1.8 * accanto, -1.8 * accanto)
+            prove = [(t, o) for t in scorrimenti for o in (((0.0,) + lati) if entra else lati)]
             # la linea non deve attraversare testi già messi
             pen_linea = sum(5 for b in testi_messi if _taglia((e1, e2), b))
             for t, o in prove:
@@ -106,7 +151,9 @@ def disponi(quote: list[dict], altezza: float, orizzontale: bool, fattore_larghe
                 costo = pen_linea
                 costo += 10 * sum(_sovrapposizione(s, b) for b in testi_messi) / (h * h)
                 costo += 3 * sum(1 for l in linee_messe if _taglia(l, s))
-                costo += 0.4 * ia + 0.2 * abs(t) / max(lung, 1e-9) + (0.3 if o else 0.0)
+                if ingombro is not None:  # testo sopra linee o scritte del disegno
+                    costo += 8 * ingombro.frazione(_scatola(cx, cy, w, h, rotazione))
+                costo += 0.4 * ia + 0.2 * abs(t) / max(lung, 1e-9) + (0.3 if abs(o) > 0 else 0.0) + (0.3 if abs(o) > accanto else 0.0)
                 if costo < minimo:
                     migliore, minimo = (ia, (cx, cy), s, (e1, e2), (t, o)), costo
             if minimo < 0.5:  # già una posizione pulita: inutile provare le altre

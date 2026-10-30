@@ -143,6 +143,7 @@ class Mappa:
         larg = seg[:, [0, 2]].max() + margine - self.x0
         alt = seg[:, [1, 3]].max() + margine - self.y0
         self.passo = max(0.02 / m_per_u, max(larg, alt) / 3000)
+        self.varco_u = varco / m_per_u
         w, h = int(larg / self.passo) + 2, int(alt / self.passo) + 2
         img = Image.new("L", (w, h), LIBERO)
         disegno = ImageDraw.Draw(img)
@@ -200,21 +201,27 @@ class Mappa:
 
     def locale(self, p: tuple[float, float], q: tuple[float, float]) -> int | None:
         """Locale attraversato dalla linea p-q, oppure None se la quota va scartata perché:
-        - tocca l'esterno;
         - corre dentro un muro;
         - passa da una porta e misura due locali insieme.
         Le zone aperte (garage, giardini) sono valide: si quota ciò che è disegnato.
         Un locale stretto (corridoio) dà -1: è valido ma non numerato."""
         h, w = self.dati.shape
+        lunghezza = math.dist(p, q)
         valori, varchi, stanze = [], [], []
         for f in np.linspace(0.05, 0.95, 19):
             c, r = self._px(p[0] + (q[0] - p[0]) * f, p[1] + (q[1] - p[1]) * f)
             if not (0 <= r < h and 0 <= c < w):
                 return None
-            valori.append(int(self.dati[r, c])); varchi.append(bool(self.varchi[r, c])); stanze.append(int(self.stanze[r, c]))
+            valori.append(int(self.dati[r, c])); stanze.append(int(self.stanze[r, c]))
+            # vicino alle estremità la chiusura riempie anche gli angoli acuti (muri inclinati):
+            # lì un "varco" non è una porta, quindi non si conta
+            if min(f, 1 - f) * lunghezza > self.varco_u:
+                varchi.append(bool(self.varchi[r, c]))
+            elif self.varchi[r, c]:
+                stanze[-1] = -1
         if valori.count(OSTACOLO) > 0.4 * len(valori):
             return None
-        quota_varchi = sum(varchi) / len(varchi)
+        quota_varchi = sum(varchi) / len(varchi) if varchi else 0.0
         if 0.03 < quota_varchi < 0.7:
             return None
         numerate = [s for s in stanze if s >= 0]
@@ -301,44 +308,47 @@ def calcola(seg_muri: np.ndarray, mappa: Mappa | None, m_per_u: float, *, arredo
         lunghezza_tratto = posizione[gruppo][-1] - posizione[gruppo][0] + passo_u
         if lunghezza_tratto < tratto_u:
             continue
-        m = gruppo.start + (gruppo.stop - gruppo.start) // 2
-        d = float(distanza[m])
-        minimo = arredi_u if arredo[i] or arredo[j] else minima_u
-        if d < minimo:
-            continue
-        p = origini[m]
-        q = p + direzioni[m] * d
-        p, q = (float(p[0]), float(p[1])), (float(q[0]), float(q[1]))
-        # altre posizioni lungo il tratto, per spostare la quota dove non si accavalla
-        alternative = []
-        for f in (0.35, 0.65, 0.2, 0.8, 0.1, 0.9):
-            k2 = gruppo.start + round(f * (gruppo.stop - gruppo.start - 1))
-            d2 = float(distanza[k2])
-            if d2 >= minimo and np.isfinite(d2):
-                a2 = origini[k2]
-                b2 = a2 + direzioni[k2] * d2
-                alternative.append(((float(a2[0]), float(a2[1])), (float(b2[0]), float(b2[1])), round(d2, 9)))
-        dentro = False
-        if arredo[i] or arredo[j]:
-            cx, cy, eps = (p[0] + q[0]) / 2, (p[1] + q[1]) / 2, 0.01 / m_per_u
-            g = ingombri_arredi
-            dentro = (mappa is not None and mappa.in_oggetto(cx, cy)) or bool(
-                g is not None and len(g) and np.any((g[:, 0] + eps < cx) & (cx < g[:, 2] - eps) & (g[:, 1] + eps < cy) & (cy < g[:, 3] - eps)))
-        locale = mappa.locale(p, q) if mappa is not None else -1
-        if locale is None:
-            continue
-        angolo = math.degrees(math.atan2(direzioni[m][1], direzioni[m][0])) % 180
-        if angolo > 90.5:  # testo sempre leggibile: da sinistra a destra o dal basso in alto
-            angolo -= 180
-        # punteggio: tratto lungo; se un muro è inclinato, meglio la quota perpendicolare a quel muro
-        # (inclinata come lui), altrimenti meglio una quota orizzontale o verticale
         storta = lambda v: min(math.degrees(math.atan2(v[1], v[0])) % 90, 90 - math.degrees(math.atan2(v[1], v[0])) % 90) > 1  # noqa: E731
-        if storta(unitari[i]) or storta(unitari[j]):
-            punteggio = lunghezza_tratto * (1.5 if storta(unitari[i]) else 1.0)
+        parallele = abs(float(unitari[i][0] * unitari[j][1] - unitari[i][1] * unitari[j][0])) < math.sin(math.radians(0.5))
+        if not parallele and storta(unitari[i]) and not storta(unitari[j]):
+            continue  # verso un muro inclinato si misura dal muro dritto (vedi sotto)
+        n_raggi = gruppo.stop - gruppo.start
+        if parallele:
+            # muri paralleli: una quota, a metà del tratto; altre posizioni per evitare accavallamenti
+            posti = [[0.5, 0.35, 0.65, 0.2, 0.8, 0.1, 0.9]]
         else:
+            # muro inclinato: solo la distanza minima e la massima, alle due estremità del tratto
+            posti = [[0.03, 0.08, 0.15], [0.97, 0.92, 0.85]]
+        minimo = arredi_u if arredo[i] or arredo[j] else minima_u
+        for frazioni in posti:
+            misure = []
+            for f in frazioni:
+                k2 = gruppo.start + round(f * (n_raggi - 1))
+                d2 = float(distanza[k2])
+                if d2 >= minimo and np.isfinite(d2):
+                    a2 = origini[k2]
+                    b2 = a2 + direzioni[k2] * d2
+                    misure.append(((float(a2[0]), float(a2[1])), (float(b2[0]), float(b2[1])), round(d2, 9), k2))
+            if not misure:
+                continue
+            p, q, d, m = misure[0]
+            alternative = tuple(x[:3] for x in misure[1:])
+            dentro = False
+            if arredo[i] or arredo[j]:
+                cx, cy, eps = (p[0] + q[0]) / 2, (p[1] + q[1]) / 2, 0.01 / m_per_u
+                g = ingombri_arredi
+                dentro = (mappa is not None and mappa.in_oggetto(cx, cy)) or bool(
+                    g is not None and len(g) and np.any((g[:, 0] + eps < cx) & (cx < g[:, 2] - eps) & (g[:, 1] + eps < cy) & (cy < g[:, 3] - eps)))
+            locale = mappa.locale(p, q) if mappa is not None else -1
+            if locale is None:
+                continue
+            angolo = math.degrees(math.atan2(direzioni[m][1], direzioni[m][0])) % 180
+            if angolo > 90.5:  # testo sempre leggibile: da sinistra a destra o dal basso in alto
+                angolo -= 180
+            # punteggio: tratto lungo, e a parità meglio una quota orizzontale o verticale
             punteggio = lunghezza_tratto * (1.2 if min(angolo % 90, 90 - angolo % 90) < 0.5 else 1.0)
-        candidati.append((punteggio, locale, _linea(seg_muri[i]), _linea(seg_muri[j]),
-                          Quota("interno", 0, p, q, round(d, 9), angolo, tuple(alternative)), minimo, dentro))
+            candidati.append((punteggio, locale, _linea(seg_muri[i]), _linea(seg_muri[j]),
+                              Quota("interno", 0, p, q, d, angolo, alternative), minimo, dentro, not parallele))
 
     # lo spazio attraversato deve essere largo almeno la luce minima anche di traverso:
     # altrimenti la quota corre dentro un muro disegnato a due linee
@@ -349,6 +359,23 @@ def calcola(seg_muri: np.ndarray, mappa: Mappa | None, m_per_u: float, *, arredo
         _, indietro = _raggi(seg_muri, centri, -trasversali, massimo=40 / m_per_u)
         candidati = [c for c, larghezza in zip(candidati, avanti + indietro) if larghezza >= c[5]]
 
+    # muri non paralleli: tra le stesse due linee, nello stesso locale, solo la misura minima e la massima
+    estremi: list[list[tuple]] = []
+    for c in (c for c in candidati if c[7]):
+        for gruppo in estremi:
+            s0 = gruppo[0]
+            if c[1] == s0[1] and _stessa_coppia(c[2:4], s0[2:4], 0.02 / m_per_u):
+                gruppo.append(c)
+                break
+        else:
+            estremi.append([c])
+    candidati = [c for c in candidati if not c[7]]
+    for gruppo in estremi:
+        corta, lunga = min(gruppo, key=lambda c: c[4].misura), max(gruppo, key=lambda c: c[4].misura)
+        candidati.append(corta)
+        if lunga[4].misura - corta[4].misura > 0.01 / m_per_u:
+            candidati.append(lunga)
+
     # stessa coppia di linee di muro nello stesso locale = una sola quota (la più rappresentativa)
     scelte: list[tuple] = []
     moduli: set[tuple] = set()  # misure dentro gli arredi già quotate: (misura, direzione, locale)
@@ -358,7 +385,7 @@ def calcola(seg_muri: np.ndarray, mappa: Mappa | None, m_per_u: float, *, arredo
             if modulo in moduli:
                 continue
             moduli.add(modulo)
-        if not any(c[1] == s[1] and _stessa_coppia(c[2:4], s[2:4], 0.02 / m_per_u)
+        if not any(c[1] == s[1] and not (c[7] and s[7]) and _stessa_coppia(c[2:4], s[2:4], 0.02 / m_per_u)
                    and (c[1] >= 0 or math.dist(_centro(c[4]), _centro(s[4])) < 1.5 / m_per_u) for s in scelte):
             scelte.append(c)
     scelte = _senza_ripetizioni(scelte, m_per_u)
@@ -400,7 +427,7 @@ def _unisci_parti(scelte: list[tuple], m_per_u: float) -> list[tuple]:
                 p1 = (base[0] + u[0] * (inizio - t0), base[1] + u[1] * (inizio - t0))
                 p2 = (base[0] + u[0] * (fine - t0), base[1] + u[1] * (fine - t0))
                 unita = Quota("interno", 0, p1, p2, round(fine - inizio, 9), q.angolo)
-                scelte[x] = (max(c[0], s[0]), c[1], c[2], s[3], unita, c[5], True)
+                scelte[x] = (max(c[0], s[0]), c[1], c[2], s[3], unita, c[5], True, False)
                 del scelte[y]
                 cambiato = True
                 break
@@ -413,12 +440,12 @@ def _senza_ripetizioni(scelte: list[tuple], m_per_u: float) -> list[tuple]:
     """Toglie le quote che non servono:
     - parti DIVERSE attaccate dello stesso arredo, sulla stessa linea (letto + cuscino):
       diventano una sola quota, l'arredo intero;
-    - stessa misura, stessa direzione, nello stesso locale, a meno di 2 m l'una dall'altra
+    - stessa misura, stessa direzione, nello stesso locale, a meno di 3 m l'una dall'altra
       e affiancate (es. due 1.40 tra divano e muro); dentro gli arredi basta che siano
       vicine (moduli uguali attaccati: una quota sola);
     - una misura dentro un arredo contenuta in un'altra più lunga dello stesso arredo
       (il cuscino dentro il letto: resta la quota del letto)."""
-    vicino, tol = 2.0 / m_per_u, 0.02 / m_per_u
+    vicino, tol = 3.0 / m_per_u, 0.02 / m_per_u
     scelte = _unisci_parti(scelte, m_per_u)
     tenute: list[tuple] = []
     for c in sorted(scelte, key=lambda c: -c[4].misura):  # prima le più lunghe

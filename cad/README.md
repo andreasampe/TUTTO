@@ -43,10 +43,12 @@ Cosa viene quotato:
 - **misure degli arredi** (tavolo, modulo della cucina): **una sola quota** per misura e per locale, quindi moduli uguali da 60×60 hanno una quota sola. Le parti diverse attaccate dello stesso arredo (letto + cuscino) diventano un'unica quota.
 
 Regole di leggibilità:
-- niente quote ripetute: stessa misura e direzione a meno di 2 m nello stesso locale vale una quota sola;
-- verso un muro inclinato, la quota è perpendicolare a quel muro;
+- niente quote ripetute: stessa misura e direzione a meno di 3 m nello stesso locale vale una quota sola;
+- stanze con un muro inclinato: solo la distanza minima e la massima, alle due estremità;
+- il pallino ha il trattino sempre verso l'interno, quindi la linea non va oltre il punto;
 - la linea di quota si sposta lungo il tratto misurato per non incrociare le altre;
-- il testo resta tra i suoi pallini, oppure subito sopra o sotto la linea. Mai oltre i pallini, dove AutoCAD allungherebbe la linea.
+- il testo resta tra i suoi pallini, oppure subito sopra o sotto la linea. Mai oltre i pallini, dove AutoCAD allungherebbe la linea;
+- il testo evita gli altri testi, le altre linee di quota e il disegno esistente (linee, campiture, scritte).
 
 Le quote vanno **sul layer e con lo stile dello studio**:
 - se il disegno li contiene già, vengono usati così come sono, senza modificarli;

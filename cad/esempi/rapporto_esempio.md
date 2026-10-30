@@ -19,7 +19,7 @@
 | 3 | Layer | ok | presenti: 01Cotas 1, DOMUS_CARTIGLIO, DOMUS_NOTE |
 | 4 | Quote | ok | 47 quote, misure uguali alla geometria (tolleranza 1e-6), testo = misura × 1 |
 | 5 | Cartiglio | ok | blocco DOMUS_CARTIGLIO con attributi, in basso a destra fuori dal disegno |
-| 6 | Esportazione | ok | elaborato.dxf, 144233 byte, DXF AC1032 |
+| 6 | Esportazione | ok | elaborato.dxf, 143871 byte, DXF AC1032 |
 | 7 | Riapertura | ok | riaperto con ezdxf, audit: 0 errori, 0 correzioni |
 | 8 | Compatibilità AutoCAD | da verificare | da aprire in AutoCAD sul Mac: in questo ambiente AutoCAD non c'è |
 | 9 | Integrità dell'originale | ok | SHA-256 del file originale invariato |
@@ -36,7 +36,7 @@
 - Generate 22 quote esterne (catene parziali e totali sui 4 lati), muri: MURI, TRAMEZZI
 - Generate 25 quote interne: luci tra muri (minimo 0.5 m) e distanze degli arredi (minimo 0.3 m)
 - Limiti: nessuno · arredi: ARREDI · porte e finestre: FINESTRE, PORTE
-- Testi spostati per non toccarsi: 13 su 47
+- Testi spostati per non toccarsi: 15 su 47
 - Inseriti cartiglio (blocco con attributi) e nota sul layer DOMUS_NOTE
-- Salvato elaborato.dxf (144233 byte)
+- Salvato elaborato.dxf (143871 byte)
 - Creata anteprima.svg

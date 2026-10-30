@@ -273,6 +273,13 @@ def aggiungi_quota(doc: Drawing, base, p1, p2, angolo: float, layer: str, stile:
     del profilo (es. DIMSCALE 1), come nelle quote disegnate dallo studio.
     `testo_in`: posizione del testo quando non può stare al centro (vedi `testi.py`).
     """
+    import math
+
+    # i punti vanno nel verso della quota: il pallino _DOT ha un trattino che deve puntare
+    # verso l'interno; con i punti invertiti il trattino esce oltre il pallino ("sborda")
+    u = (math.cos(math.radians(angolo)), math.sin(math.radians(angolo)))
+    if (p2[0] - p1[0]) * u[0] + (p2[1] - p1[1]) * u[1] < 0:
+        p1, p2 = p2, p1
     ds = doc.dimstyles.get(stile)
     resa = {k: v for k, v in PREDEFINITI_AUTOCAD.items() if not ds.dxf.hasattr(k)}
     dim = doc.modelspace().add_linear_dim(base=base, p1=p1, p2=p2, angle=angolo, dimstyle=stile, location=testo_in,

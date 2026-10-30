@@ -6,7 +6,7 @@
 python3 -m unittest discover -s tests
 ```
 
-20 test, tutti superati il 30/10/2026 (Python 3.13, ezdxf 1.4.2). Usano `esempi/esempio_artificiale.dxf`, un appartamento **inventato** di 12 × 9 m in metri: **non sono una prova su file reali**.
+22 test, tutti superati il 30/10/2026 (Python 3.13, ezdxf 1.4.2). Usano `esempi/esempio_artificiale.dxf`, un appartamento **inventato** di 12 × 9 m in metri: **non sono una prova su file reali**.
 
 | Test | Cosa verifica |
 |---|---|
@@ -21,6 +21,8 @@ python3 -m unittest discover -s tests
 | moduli uguali | tre moduli da 60×60: una sola quota di larghezza e una di profondità |
 | testi spostati | due quote vicinissime: la più lunga tiene il testo al centro, l'altra lo sposta restando tra i suoi pallini |
 | letto con cuscino | una sola quota di 2,00 per il letto, nessuna per il solo cuscino |
+| pallini | il trattino del blocco `_DOT` punta dentro la quota (escluse le quote sotto i 30 cm, con i pallini fuori) |
+| muro inclinato | stanza larga 4 m in basso e 5 m in alto: solo due quote orizzontali, la minima e la massima |
 | quote interne | luci nette 4,90 / 4,20 / 4,10 dei locali; niente spessori di muro; nessuna quota attraversa il tramezzo |
 | senza quote interne | l'opzione le disattiva |
 | originale intatto | SHA-256 dell'originale e della sua copia invariati |
@@ -88,6 +90,16 @@ Andrea sulla seconda versione:
   - letto e cuscino con due quote.
 
   Fatto: 69 quote interne, nessun doppione vicino, letto 1.95 e 2.00 con una quota, quote inclinate verso i muri inclinati. Il testo non va mai oltre i pallini;
+- Andrea:
+  - nelle stanze con muri inclinati solo la quota minima e la massima;
+  - la linea sborda ancora oltre il pallino;
+  - migliorare anche i punti rimasti aperti.
+
+  Fatto:
+  - quote minima e massima;
+  - **causa della linea che sborda trovata e corretta**: il blocco `_DOT` ha un trattino che con i punti invertiti usciva dal pallino;
+  - testi che evitano anche il disegno esistente;
+  - ripetizioni fino a 3 m;
 - **problema tecnico risolto:** nel DXF AutoCAD non scrive i valori predefiniti dello stile (separatore decimale, zeri, testo orizzontale) ed ezdxf li sostituiva con quelli ISO ("0,6" invece di "0.60"). Ora la grafica della quota usa i predefiniti di AutoCAD, senza modificare lo stile.
 
 **Errore trovato grazie al file reale e corretto:** il controllo di conservazione falliva sui CERCHI, che nell'esempio artificiale non c'erano. Ora l'esempio contiene un pilastro circolare e il test lo copre.
