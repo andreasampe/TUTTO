@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1254 1254">
+  <!-- DOMUS — icona. Geometria misurata sull'originale (domus_logo.png, 1254 px):
+       D = barra + mezza ellisse (centro 700,632 · semiassi 272×314,5), casa con tetto a 592,513,
+       tratto 43,5 px; griglia di costruzione a x 262/318/625/985 e y 226/632/984. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#18181a"/>
+      <stop offset="1" stop-color="#08090a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1254" height="1254" rx="300" fill="url(#bg)"/>
+  <g fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="2.2">
+    <path d="M262 152V1055M318 230V1000M625 136V1067M985 152V1054M185 226H1058M175 632H1071M186 984H1061"/>
+    <path d="M262 984L625 632M985 226L870 337M262 226L330 292M885 882L985 984"/>
+    <circle cx="625" cy="632" r="310"/>
+    <path d="M610 228A418 404 0 0 1 985 540"/>
+  </g>
+  <g stroke="#fff" stroke-width="3" stroke-linecap="round">
+    <path d="M250 226H274M262 214V238M973 226H997M985 214V238M250 984H274M262 972V996M973 984H997M985 972V996M617 632H633M625 624V640"/>
+  </g>
+  <g fill="none" stroke="#f3f2ef" stroke-width="43.5" stroke-linejoin="miter" stroke-miterlimit="8">
+    <path d="M319 317.5H700A272 314.5 0 0 1 748 941.6"/>
+    <path d="M413 983V630L592 513L747 624V962"/>
+  </g>
+</svg>

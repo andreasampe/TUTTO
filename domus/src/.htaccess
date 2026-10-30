@@ -1,0 +1,2 @@
+# Il codice PHP interno non va mai servito direttamente dal browser.
+Require all denied
