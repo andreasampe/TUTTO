@@ -64,7 +64,12 @@ Architettura proposta:
 **Passo 1, prova di fattibilità:** `web/prova_browser.html`, generata da `web/genera_prova.py`.
 - Verificato qui: Pyodide 0.27.7 parte nel browser e contiene tutte le librerie necessarie (numpy 2.0.2, Pillow 10.2.0, pyparsing, fonttools, typing-extensions; ezdxf da PyPI).
 - Non verificabile qui: l'elaborazione completa, perché il CDN di Pyodide è bloccato in questo ambiente cloud.
-- **Andrea:** aprire la pagina sul Mac (Chrome) e far elaborare `REF.OPCION 2.dxf`.
+- **Verificato da Andrea sul Mac, in Chrome (30/10/2026):**
+  - motore pronto in 2,3 s;
+  - `REF.OPCION 2.dxf` elaborato in **6,4 s**, esito superato;
+  - stesso risultato della versione da riga di comando: 28 quote esterne e 74 interne, 35 testi spostati, controlli 1-7, 9 e 11 ok.
+
+  **Il motore funziona nel browser:** l'area Planimetrie può fare a meno di Python sul server.
 
 CADCraft (CAD completo nel browser) resta da rivalutare se un giorno servirà modificare il disegno vero. Oggi perde dati al salvataggio (vedi ANALISI_TECNICA.md).
 

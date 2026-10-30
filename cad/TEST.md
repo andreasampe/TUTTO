@@ -110,6 +110,13 @@ Andrea sulla seconda versione:
 - sul muro inclinato si quota la proiezione orizzontale e verticale, non la lunghezza vera del muro;
 - il lato sinistro quota solo il corpo edificato, perché il garage non ha muri sul layer quotato.
 
+## Motore nel browser (Pyodide)
+
+`web/prova_browser.html`, provata da Andrea sul Mac in Chrome il 30/10/2026:
+- motore pronto in 2,3 s;
+- `REF.OPCION 2.dxf` elaborato in 6,4 s, esito superato;
+- risultato identico a quello della riga di comando.
+
 ## Controlli ancora necessari
 
 - [x] **Planimetria reale** (punto 21): `REF.OPCION 2.dxf`, vedi sopra.
