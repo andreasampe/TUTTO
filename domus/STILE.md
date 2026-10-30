@@ -59,7 +59,15 @@ Riferimento: le tavole di presentazione di DOMUS (nero profondo, fotografia arch
 
 ## Marchio
 
-- `assets/icon.svg`: favicon. Quadrato nero arrotondato, griglia di costruzione e la D che accoglie la casa.
+La geometria è misurata sul file originale `domus_logo.png` (1254 px), con una corrispondenza dei tratti del 95%:
+- **D:** barra orizzontale a y 317,5 da x 319 a 700, poi mezza ellisse con centro (700, 632) e semiassi 272 × 314,5, che si chiude a (748, 941,6);
+- **casa:** parete sinistra a x 413, tetto con colmo in (592, 513), parete destra a x 747;
+- **tratto:** 43,5 px;
+- **griglia di costruzione:** linee a x 262 / 318 / 625 / 985 e a y 226 / 632 / 984, cerchio con centro (625, 632) e raggio 310, crocini agli incroci.
+
+File:
+- `assets/icon.svg`: favicon. Quadrato nero arrotondato con leggera sfumatura, griglia di costruzione e la D che accoglie la casa.
+- `assets/apple-touch-icon.png`: la stessa icona in PNG 180 px, per la schermata Home dell'iPhone.
 - `assets/logo.svg` / `logo-white.svg`: solo il marchio a linea, per il menu e la pagina di accesso.
 - **Motto:** *Design · Organize · Model · Unify · Simplify*, in verticale, maiuscolo spaziato, con le iniziali in evidenza (classi `.motto`, `.acronym`, `.hero-side`).
 
@@ -68,10 +76,16 @@ Riferimento: le tavole di presentazione di DOMUS (nero profondo, fotografia arch
 | File | Dove |
 |---|---|
 | `assets/img/home.jpg` | panoramica: la D in cemento che accoglie la casa |
-| `assets/img/login.jpg` | pagina di accesso: la villa sull'acqua |
-| `assets/img/brand.jpg` | testata dei progetti senza copertina: dettaglio in cemento |
+| `assets/img/login.jpg` | pagina di accesso: la casa in fil di ferro che diventa cemento |
+| `assets/img/brand.jpg` | testata dei progetti senza copertina: la villa in fil di ferro |
+| `demo/*.jpg` | foto dei progetti dimostrativi |
 
-Le immagini attuali sono ritagliate dalle tavole e vanno sostituite con gli originali in alta risoluzione (circa 2400 px di lato lungo, JPG qualità 80). Basta tenere lo stesso nome del file.
+Sono le immagini fornite da Andrea, a 1376 px di larghezza. Per sostituirle basta tenere lo stesso nome del file.
+
+**Motto:**
+- in inglese, per il marchio: **D**esign · **O**rganize · **M**odel · **U**nify · **S**implify;
+- in italiano, per i testi: *Disegna. Organizza. Modella. Unifica. Semplifica.*;
+- firma: *DOMUS · Intelligent Building Design*.
 
 ## Movimento
 

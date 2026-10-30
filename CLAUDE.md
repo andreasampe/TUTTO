@@ -85,24 +85,30 @@ Webapp gestionale per lo studio di architettura (Chiara Pucci, architetto). Legg
 - **collaboratori** con ruoli;
 - **stampa** della scheda progetto.
 
+**Fase 3 (completata)**
+- **marchio vettoriale** ricalcato sul PNG originale (`domus_logo.png`, caricato da Andrea su `main` insieme alle immagini). Le misure sono in `STILE.md`;
+- **studio dimostrativo** (`src/Demo.php`): 7 progetti, foto da `domus/demo/`, PDF generati da `src/Pdf.php`. Si carica solo con l'archivio vuoto;
+- **Studio** (statistiche con grafici SVG), **Galleria** con visore, **Bacheca** a colonne con trascinamento: tutte in `assets/js/screens.js`;
+- **calendario iCal** (`src/Ical.php`), con un codice segreto per utente;
+- **preventivo PDF** (`Payments::quotePdf`).
+
 ### Come provare
 
-- `bash domus/tests/run.sh` avvia il server PHP integrato su un database temporaneo ed esegue i test dell'API in `tests/api_test.php` (89 controlli, tutti verdi alla consegna).
+- `bash domus/tests/run.sh` avvia il server PHP integrato su un database temporaneo ed esegue i test dell'API: `tests/api_test.php` (89 controlli) e `tests/demo_test.php` (16 controlli: studio dimostrativo, statistiche, galleria, iCal, preventivo), tutti verdi alla consegna.
+- Schermate aggiornate in `domus/docs/schermate/` (20 immagini).
 - Per l'interfaccia: `php -S` su una cartella che contiene `domus/` (per simulare il percorso `/domus/` di Local) e Playwright (preinstallato nell'ambiente cloud).
 - In questo ambiente cloud **non si può avviare WordPress** (il codice esterno è bloccato) e **non c'è accesso ai siti esterni**.
 
 ### Prossimi passi possibili (da concordare con l'utente)
 
-1. **Preventivi** da inviare al cliente, generati dalle rate, con PDF intestato allo studio.
+1. **Fornitori e imprese** (anagrafica separata dai clienti) collegati ai progetti.
 2. **Calcolo dell'onorario** secondo il DM 17/06/2016 (parametri), come supporto al preventivo.
 3. **Computo metrico** semplice per voci e categorie di lavoro.
-4. **Fornitori e imprese** (anagrafica separata dai clienti) collegati ai progetti.
-5. **Area clienti** in sola lettura, per condividere documenti e avanzamento.
-6. **Esportazione** del calendario in formato iCal, da abbonare sul calendario del Mac o dell'iPhone.
-7. **Promemoria via email** delle scadenze (servirebbe un invio SMTP configurato).
+4. **Area clienti** in sola lettura, per condividere documenti e avanzamento.
+5. **Promemoria via email** delle scadenze (servirebbe un invio SMTP configurato).
 
 ## Storico del repository
 
 - Prima di DOMUS qui c'era FINDER (motore di ricerca locale). L'utente l'ha fatto cancellare e resta solo nella cronologia Git.
-- **Branch di lavoro**: `claude/ciao-kds7b5`. Su `main` non c'è ancora DOMUS.
+- **Branch di lavoro**: `claude/ciao-kds7b5`. Su `main` ci sono solo le immagini caricate da Andrea (logo, render, tavole): DOMUS non è ancora unito a `main`.
 - **Installazione sul Mac**: non ancora fatta. Andrea ha creato il sito `DOMUS` in Local, ma ha chiesto di completare il prodotto prima di copiarlo. Le istruzioni passo passo sono in `domus/README.md`: copiare `domus/` in `Local Sites/DOMUS/app/public/` e aprire `http://domus.local/domus/`.

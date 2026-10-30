@@ -6,7 +6,13 @@ Webapp per lo studio di architettura: **progetti** (commesse) con fasi, **client
 - I dati stanno in un **file SQLite** (`domus.sqlite`) nella cartella `domus-data`, fuori dalla parte pubblica del sito.
 - Da *Impostazioni → Backup* si scarica tutto in un file **JSON** leggibile.
 
-Lo stile (colori, caratteri, componenti, immagini) è descritto in [STILE.md](STILE.md).
+Lo stile (colori, caratteri, componenti, immagini) è descritto in [STILE.md](STILE.md). Le schermate sono in [docs/schermate](docs/schermate/).
+
+| | |
+|---|---|
+| ![Panoramica](docs/schermate/02-panoramica.jpg) | ![Scheda progetto](docs/schermate/05-scheda-progetto.jpg) |
+| ![Galleria](docs/schermate/10-galleria.jpg) | ![Studio](docs/schermate/12-studio.jpg) |
+| ![Bacheca](docs/schermate/04-bacheca.jpg) | ![Accesso](docs/schermate/01-accesso.jpg) |
 
 ## Requisiti
 
@@ -40,7 +46,16 @@ Local Sites/DOMUS/
 | **Clienti** | anagrafica (privati, aziende, enti) con i rispettivi progetti |
 | **Scadenze** | tutte le cose da fare: superate, entro 7 giorni, fatte |
 | **Calendario** | mese con scadenze, fasi, consegne, pratiche e rate (elenco sul telefono) |
-| **Impostazioni** | nome dello studio, fasi standard, collaboratori, profilo e password, backup JSON |
+| **Bacheca** | progetti in colonne per stato: si spostano trascinandoli |
+| **Galleria** | tutte le foto dei progetti, con visore a tutto schermo (frecce della tastiera per scorrere) |
+| **Studio** | statistiche: incassi e ore per mese, progetti per stato, dove va il tempo, ore della squadra, tempo medio delle pratiche |
+| **Impostazioni** | nome dello studio, fasi standard, collaboratori, profilo e password, calendario iCal, studio dimostrativo, backup JSON |
+
+**Studio dimostrativo:** con l'archivio vuoto, dalla Panoramica o da Impostazioni si carica uno studio di esempio. Contiene 7 progetti, 6 clienti, 2 collaboratori, foto, documenti PDF, pratiche, rate e sei settimane di ore. Serve per provare tutte le funzioni.
+
+**Preventivo PDF:** nella scheda *Economia* di un progetto, il pulsante **Preventivo PDF** genera la proposta di parcella. Contiene l'intestazione dello studio, il destinatario, le rate e il totale.
+
+**Calendario sul Mac e sull'iPhone:** in *Impostazioni* c'è un indirizzo personale da abbonare nell'app Calendario (*Archivio → Nuovo abbonamento al calendario*). Scadenze, fasi, consegne, pratiche e rate si aggiornano da sole.
 
 **Ricerca rapida:** `⌘K` (Mac) o `Ctrl K` da qualunque pagina cerca progetti, clienti, protocolli delle pratiche e nomi dei documenti.
 
@@ -70,4 +85,4 @@ Si copiano due cartelle: `domus` (nella parte pubblica) e `domus-data` (un livel
 bash tests/run.sh
 ```
 
-Avvia DOMUS con il server PHP integrato su un database temporaneo e prova tutta l'API (89 controlli): accesso, ruoli, clienti, progetti, fasi, scadenze, diario, documenti, pratiche, economia, ore, calendario, ricerca, backup e protezioni.
+Avvia DOMUS con il server PHP integrato su un database temporaneo e prova tutta l'API (105 controlli): accesso, ruoli, clienti, progetti, fasi, scadenze, diario, documenti, pratiche, economia, ore, calendario, ricerca, backup, protezioni, studio dimostrativo, statistiche, galleria, iCal e preventivo PDF.
