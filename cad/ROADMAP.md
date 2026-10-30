@@ -27,5 +27,5 @@ File di avanzamento del progetto (punto 17.6): va aggiornato alla fine di ogni f
 
 ## Problemi aperti
 
-- Database: hosting o SQLite? Da decidere con Andrea (vedi l'analisi, sezione 7).
-- Verifica dell'hosting: non fatta, perché da questa sessione non è accessibile.
+- ~~Database~~: deciso il 30/10/2026, **niente database dell'hosting**, dati su file (SQLite/JSON).
+- Hosting: probabilmente Aruba condiviso (Andrea non conosce i dettagli). Ipotesi di lavoro: il sito gestisce file e progetti, l'elaborazione CAD gira sul Mac. Da verificare dal pannello Aruba quando servirà la Fase 6.

@@ -11,7 +11,8 @@ Legenda dello stato delle funzioni (punto 17.5): **analizzata** · **implementat
 | **Sessione di sviluppo** (cloud, Linux) | Python 3.13, Rust 1.97, accesso a PyPI e crates.io; **niente AutoCAD**, niente accesso diretto ai siti esterni né al Mac | qui si sviluppa e si testa il motore, ma la verifica in AutoCAD si fa sul Mac |
 | **Mac di Andrea** (Apple Silicon) | Non accessibile da questa sessione | **da verificare** con i comandi di [README.md](README.md#prima-installazione-sul-mac): versione di Python, spazio libero |
 | **Hosting e sito** | Non accessibile da questa sessione | **da verificare** dal pannello di controllo: vedi la sezione 6 |
-| **Database** | Non accessibile | **da verificare**. Nota: in passato Andrea ha detto di non volersi appoggiare ai database dell'hosting, mentre la specifica dice di riutilizzare quello disponibile. **Va deciso con lui** (sezione 7) |
+| **Hosting** | Andrea (30/10/2026): *"credo sia Aruba, hosting Windows e Linux"*, non conosce altri dettagli | probabilmente un hosting condiviso Aruba. Di solito ha PHP e MySQL ma **niente Python né esecuzione di programmi esterni**: è da confermare dal pannello di controllo |
+| **Database** | **Deciso da Andrea (30/10/2026): NON usare il database dell'hosting.** Pochi dati, quindi file SQLite e file JSON nelle cartelle di progetto | decisione presa: deroga voluta al punto 11.6 della specifica |
 
 ## 2. CADCraft (punto 5.1)
 
@@ -70,14 +71,14 @@ Dal pannello di controllo dell'hosting, senza modificare niente:
 5. Spazio disco disponibile.
 6. Tipo e versione del database (solo tipo e versione: **mai** inviare le credenziali).
 
-Se l'hosting non può eseguire Python, vale l'architettura del punto 3 della specifica: il sito gestisce progetti e file, l'elaborazione avviene sul Mac.
+Se l'hosting non può eseguire Python, vale l'architettura del punto 3 della specifica: il sito gestisce progetti e file, l'elaborazione avviene sul Mac. Con un hosting condiviso Aruba è lo **scenario più probabile**, ed è l'ipotesi di lavoro finché non arriva la verifica.
 
 ## 7. Informazioni che mancano davvero
 
 1. **Una planimetria reale**, DWG o DXF da AutoCAD. Senza questa il prototipo è collaudato solo su un esempio artificiale (punto 21).
 2. **La prova del risultato in AutoCAD** (test 8).
 3. **Le caratteristiche dell'hosting** (sezione 6).
-4. **Database**: usare quello dell'hosting, come dice la specifica, oppure restare su file SQLite, come chiesto in precedenza?
+4. ~~Database~~: **deciso, niente database dell'hosting**: dati su file (SQLite/JSON).
 5. **Convenzioni dello studio**: unità dei disegni (metri o centimetri), scale abituali, formato del cartiglio, nomi dei layer usati per muri, porte e finestre.
 
 ## 8. Difficoltà tecniche (stima qualitativa)

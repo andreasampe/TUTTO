@@ -44,6 +44,10 @@ Indicazioni sue, dal documento master:
   - mancano una planimetria reale di Andrea e la prova in AutoCAD;
   - avanzamento in `cad/ROADMAP.md`.
 - Flusso DWG scelto: AutoCAD *Salva con nome → DXF 2018*, poi elaborazione DOMUS, poi controllo in AutoCAD e salvataggio in DWG. CADCraft (MIT/Apache) è stato analizzato ma oggi è immaturo nel salvataggio: va rivalutato su file reali.
+- Decisioni di Andrea (30/10/2026):
+  - **niente database dell'hosting**: dati su file (SQLite/JSON), anche se la specifica direbbe il contrario;
+  - l'hosting è probabilmente **Aruba condiviso** (dettagli sconosciuti), quindi si presume che l'elaborazione CAD giri sul Mac e il sito gestisca solo progetti e file;
+  - manderà una planimetria reale in DXF.
 - Errore da non ripetere: la webapp `domus/` è stata costruita **prima** di avere questa specifica, interpretando una sola riga del documento master. **Chiedere sempre lo scopo prima di costruire.**
 
 ## DOMUS web (cartella `domus/`)
