@@ -27,9 +27,28 @@ Indicazioni sue, dal documento master:
 - App **autonome e trasferibili**, con il minimo di dipendenze tra un progetto e l'altro.
 - Estetica molto curata.
 
-## DOMUS (cartella `domus/`)
+## OBIETTIVO VERO DI DOMUS: software CAD per architetti (cartella `cad/`)
 
-Webapp gestionale per lo studio di architettura (Chiara Pucci, architetto). Leggi `domus/README.md` per installazione e uso.
+**Leggi per prima cosa `cad/SPECIFICA.txt`**: è la specifica di Andrea ed è vincolante.
+- Obiettivo: partire da una planimetria reale (DWG/DXF di AutoCAD) e generare elaborati tecnici CAD: piante quotate, stato di fatto e di progetto, demolizioni e costruzioni, impianti, tavole PDF.
+- Vincoli assoluti:
+  - zero costi;
+  - solo open source con licenze verificate;
+  - niente API AI a pagamento;
+  - niente dati inventati;
+  - procedere per fasi;
+  - non dichiarare completato ciò che non è testato su file reali.
+- **Stato (30/10/2026):**
+  - Fase 0 fatta (`cad/ANALISI_TECNICA.md`);
+  - Fase 1, prototipo in `cad/domus_cad/` con Python e ezdxf, testata **solo su un esempio artificiale** (10 test con `python -m unittest discover -s tests`);
+  - mancano una planimetria reale di Andrea e la prova in AutoCAD;
+  - avanzamento in `cad/ROADMAP.md`.
+- Flusso DWG scelto: AutoCAD *Salva con nome → DXF 2018*, poi elaborazione DOMUS, poi controllo in AutoCAD e salvataggio in DWG. CADCraft (MIT/Apache) è stato analizzato ma oggi è immaturo nel salvataggio: va rivalutato su file reali.
+- Errore da non ripetere: la webapp `domus/` è stata costruita **prima** di avere questa specifica, interpretando una sola riga del documento master. **Chiedere sempre lo scopo prima di costruire.**
+
+## DOMUS web (cartella `domus/`)
+
+Webapp gestionale per lo studio di architettura (Chiara Pucci, architetto), nata prima della specifica CAD. Nella specifica corrisponde alla futura **Fase 6 (integrazione web)**: progetti, file e utenti, che poi richiameranno il motore `cad/`. Leggi `domus/README.md` per installazione e uso. L'installazione in Local è stata **sospesa** in attesa di decidere come procedere.
 
 ### Architettura
 
