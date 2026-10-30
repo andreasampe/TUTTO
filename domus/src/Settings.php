@@ -22,7 +22,7 @@ final class Settings
     public static function all(): array
     {
         $out = self::DEFAULTS;
-        foreach (Db::all('SELECT key, value FROM settings') as $r) {
+        foreach (Db::all("SELECT key, value FROM settings WHERE key NOT LIKE 'ical_token_%'") as $r) {
             $out[$r['key']] = (string) $r['value'];
         }
         return $out;

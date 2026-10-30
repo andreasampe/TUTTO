@@ -32,6 +32,11 @@ try {
         }
     }
 
+    // Calendario iCal: si legge con il codice segreto personale, senza sessione.
+    if ($route === 'calendar.ics' && $method === 'GET') {
+        Ical::feed((string) ($_GET['token'] ?? ''));
+    }
+
     // ---------- accesso (senza login) ----------
     if ($resource === 'auth') {
         $action = $parts[1] ?? '';
@@ -65,6 +70,10 @@ try {
         $resource === 'dashboard' && $method === 'GET' => Dashboard::data($user),
         $resource === 'search' && $method === 'GET' => Search::run($q),
         $resource === 'calendar' && $method === 'GET' => Calendar::events($user, (string) ($_GET['from'] ?? ''), (string) ($_GET['to'] ?? '')),
+        $resource === 'reports' && $method === 'GET' => Reports::data($user),
+        $resource === 'gallery' && $method === 'GET' => Reports::gallery(),
+        $route === 'ical' && $method === 'GET' => ['token' => Ical::token($user)],
+        $route === 'ical' && $method === 'POST' => ['token' => Ical::token($user, true)],
         $resource === 'meta' && $method === 'GET' => [
             'permit_kinds' => Permits::KINDS,
             'file_categories' => Files::CATEGORIES,
@@ -124,6 +133,9 @@ try {
         $resource === 'users' && $id === null && $method === 'GET' => $admin() ? Users::list() : null,
         $resource === 'users' && $id === null && $method === 'POST' => $admin() ? ['id' => Users::create($in)] : null,
         $resource === 'users' && $id !== null && $method === 'PUT' => $admin() ? $ok(fn () => Users::update($user, $id, $in)) : null,
+
+        $route === 'demo' && $method === 'GET' => ['available' => Demo::available()],
+        $route === 'demo' && $method === 'POST' => $admin() ? Demo::seed($user) : null,
 
         $resource === 'settings' && $method === 'GET' => Settings::all(),
         $resource === 'settings' && $method === 'PUT' => $admin() ? Settings::save($in) : null,
