@@ -7,7 +7,8 @@
             │ richiama da riga di comando
  Motore CAD  domus_cad/                             ← questo pacchetto, indipendente dal web
    ├─ lettura.py     lettura DXF, rapporto e problemi del disegno     (punto 4.A)
-   ├─ quote.py       modulo "piante quotate": calcolo + disegno       (punto 8.1)
+   ├─ quote.py       catene di quote esterne e stile di quota         (punto 8.1)
+   ├─ interne.py     quote interne: luci nette dei locali             (punto 8.1)
    ├─ cartiglio.py   cartiglio a blocco con attributi, note            (punto 8.1)
    └─ elabora.py     flusso completo, verifiche, anteprima, rapporto   (punti 14-15)
             │ usa

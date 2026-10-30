@@ -1,7 +1,7 @@
 """Riga di comando del prototipo.
 
     python -m domus_cad leggi    pianta.dxf
-    python -m domus_cad elabora  pianta.dxf --uscita lavori/progetto --scala 100 --formato cm
+    python -m domus_cad elabora  pianta.dxf --uscita lavori/progetto --scala 50
 """
 from __future__ import annotations
 
@@ -24,8 +24,11 @@ def main(argv: list[str] | None = None) -> int:
     e.add_argument("--uscita", required=True, help="cartella del progetto (originali, elaborazioni)")
     e.add_argument("--unita", choices=["mm", "cm", "m"], help="obbligatoria se il file non dichiara le unità")
     e.add_argument("--scala", type=int, default=100, help="scala di stampa, es. 100 per 1:100")
-    e.add_argument("--formato", choices=["cm", "m", "mm"], default="cm", help="unità del testo delle quote")
+    e.add_argument("--formato", choices=["cm", "m", "mm"], default="m", help="unità del testo delle quote (predefinito: metri)")
     e.add_argument("--layer-muri", nargs="*", help="layer da quotare (predefinito: tutti)")
+    e.add_argument("--layer-aperture", nargs="*", help="layer di porte e finestre (predefinito: riconosciuti dal nome)")
+    e.add_argument("--senza-interne", action="store_true", help="solo le catene esterne, niente quote dentro i locali")
+    e.add_argument("--luce-minima", type=float, default=0.5, help="luce interna minima da quotare, in metri")
     e.add_argument("--progetto", default="")
     e.add_argument("--studio", default="")
     e.add_argument("--elaborato", default="Pianta quotata - stato di fatto")
@@ -38,6 +41,8 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         esito = elabora(a.file, a.uscita, unita=a.unita, scala=a.scala, formato=a.formato,
                         layer_muri=set(a.layer_muri) if a.layer_muri else None,
+                        layer_aperture=set(a.layer_aperture) if a.layer_aperture is not None else None,
+                        quote_interne=not a.senza_interne, luce_minima=a.luce_minima,
                         valori_cartiglio={"PROGETTO": a.progetto, "STUDIO": a.studio, "ELABORATO": a.elaborato})
     except (ValueError, OSError) as err:
         print(f"Errore: {err}", file=sys.stderr)

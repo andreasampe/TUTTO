@@ -50,11 +50,38 @@ class Prototipo(unittest.TestCase):
             parziali = sum(q["misura"] for q in esito["quote"] if q["lato"] == lato and q["livello"] == 1)
             self.assertAlmostEqual(parziali, totali[lato], places=9)
 
-    def test_testo_delle_quote_in_centimetri(self):
+    def test_quote_in_metri_come_lo_studio(self):
         esito = self.elabora()
         doc = ezdxf.readfile(esito["elaborato"])
         stile = doc.dimstyles.get(quote.STILE)
-        self.assertEqual(stile.dxf.dimlfac, 100.0)
+        self.assertEqual(stile.dxf.dimlfac, 1.0)      # metri
+        self.assertEqual(stile.dxf.dimdec, 2)         # 1.50
+        self.assertEqual(stile.dxf.dimdsep, ord("."))
+        self.assertEqual(stile.dxf.dimblk, "_DOT")    # pallino, come lo stile "50" dello studio
+
+    def test_testo_delle_quote_in_centimetri(self):
+        esito = self.elabora(formato="cm")
+        doc = ezdxf.readfile(esito["elaborato"])
+        self.assertEqual(doc.dimstyles.get(quote.STILE).dxf.dimlfac, 100.0)
+
+    def test_quote_interne_delle_stanze(self):
+        esito = self.elabora()
+        luci = [q for q in esito["quote"] if q["lato"] == "interno"]
+        misure = sorted(round(q["misura"], 2) for q in luci)
+        # luci nette dell'esempio: soggiorno e camera larghi 4,90; soggiorno 4,20 e camera 4,10 di profondità
+        for attesa in (4.90, 4.20, 4.10):
+            self.assertIn(attesa, misure)
+        self.assertEqual(misure.count(4.90), 2)        # stessa larghezza, ma due locali diversi
+        self.assertTrue(all(m >= 0.5 for m in misure))  # niente spessori di muro
+        # a sinistra nessuna quota attraversa il tramezzo tra soggiorno e camera (a destra
+        # invece cucina e bagno dell'esempio non sono divisi da un muro: 8,40 lì è giusta)
+        self.assertFalse([q for q in luci if q["p1"][0] < 5.2 and round(q["misura"], 2) == 8.40])
+        doc = ezdxf.readfile(esito["elaborato"])
+        self.assertEqual(len(doc.modelspace().query('DIMENSION[layer=="DOMUS_QUOTE_INTERNE"]')), len(luci))
+
+    def test_senza_quote_interne(self):
+        esito = self.elabora(quote_interne=False)
+        self.assertFalse([q for q in esito["quote"] if q["lato"] == "interno"])
 
     def test_originale_mai_modificato(self):
         prima = impronta(self.dxf)

@@ -6,13 +6,16 @@
 python3 -m unittest discover -s tests
 ```
 
-10 test, tutti superati il 30/10/2026 (l'esempio ora include un cerchio) (Python 3.13, ezdxf 1.4.2). Usano `esempi/esempio_artificiale.dxf`, un appartamento **inventato** di 12 × 9 m in metri: **non sono una prova su file reali**.
+13 test, tutti superati il 30/10/2026 (Python 3.13, ezdxf 1.4.2). Usano `esempi/esempio_artificiale.dxf`, un appartamento **inventato** di 12 × 9 m in metri: **non sono una prova su file reali**.
 
 | Test | Cosa verifica |
 |---|---|
 | flusso completo | nessun controllo fallito; esistono elaborato, anteprima, log e rapporto |
 | quote totali | 12,00 / 9,00 / 5,00 m come nel disegno; le catene parziali sommano al totale |
-| testo in centimetri | fattore di conversione 100 nello stile di quota |
+| quote in metri | stile come lo stile "50" dello studio: metri, 2 decimali, punto, pallino |
+| testo in centimetri | con `formato="cm"` il fattore di conversione è 100 |
+| quote interne | luci nette 4,90 / 4,20 / 4,10 dei locali; niente spessori di muro; nessuna quota attraversa il tramezzo |
+| senza quote interne | l'opzione le disattiva |
 | originale intatto | SHA-256 dell'originale e della sua copia invariati |
 | ripetibile | due elaborazioni producono le stesse quote e le stesse misure (punto 15, test 10) |
 | quote e testi | le quote in alto stanno sopra i testi esistenti |
@@ -37,9 +40,23 @@ Andrea ha fornito 3 file di un progetto reale, *"Vivienda Moya"* (Spagna, normat
 | `REF.OPCION 3.dxf` | pianta dell'opzione 3, struttura analoga | letto senza errori, non ancora elaborato |
 | `03_BASICO_VIVIENDA MOYA OPCION 2-3.dxf` | insieme di tavole affiancate (impianti, abitabilità, DB-SI, DB-SUA): 1.863 entità, 267 quote esistenti, 7 tabelle, campi (FIELD) | letto. **Non elaborabile così**: va scelta la zona (vedi la Roadmap). Richiama l'xref `00 REF_VIVIENDA MOYA`, **non fornito** |
 
-**REF.OPCION 2, quotato solo sui layer `01Seccionado albañilería` e `01Seccionado albanileria`** (lo stesso layer scritto in due modi):
-- test 1-7, 9 e 11 **ok**: 583 entità originali intatte, 28 quote uguali alla geometria, riapertura senza errori;
-- test 8 (AutoCAD) **da verificare**.
+**REF.OPCION 2, prima versione** (quotati i layer `01Seccionado albañilería` e `01Seccionado albanileria`):
+- 28 quote esterne in cm;
+- **Andrea l'ha aperta in AutoCAD senza errori** (test 8, 30/10/2026);
+- il suo giudizio: *"le quote così non vanno bene"*. Le vuole:
+  - in metri, come il layer `01Cotas 1` del file `03_BASICO`;
+  - sui muri perimetrali e su quelli interni;
+  - con le distanze dentro le stanze.
+
+**REF.OPCION 2, seconda versione** (layer dei muri e campitura `01Trama solido`, scala 1:50):
+- 28 quote esterne e **22 quote interne**, in metri, nello stile dello studio (stile "50");
+- test 1-7, 9 e 11 **ok**;
+- **confronto con `01Cotas 1`**: le quote interne 7.20, 4.00, 3.50, 1.50, 1.40, 1.00 e 0.90 coincidono con quelle disegnate dallo studio;
+- mancano ancora:
+  - le distanze tra arredi e muri (es. 0.90 tra tavolo e cucina);
+  - alcune profondità delle camere;
+  - il garage, che sul layer dei muri è aperto;
+- test 8 sulla seconda versione: **da verificare** in AutoCAD.
 
 **Errore trovato grazie al file reale e corretto:** il controllo di conservazione falliva sui CERCHI, che nell'esempio artificiale non c'erano. Ora l'esempio contiene un pilastro circolare e il test lo copre.
 
@@ -52,9 +69,9 @@ Andrea ha fornito 3 file di un progetto reale, *"Vivienda Moya"* (Spagna, normat
 ## Controlli ancora necessari
 
 - [x] **Planimetria reale** (punto 21): `REF.OPCION 2.dxf`, vedi sopra.
-- [ ] **Test 8 in AutoCAD**, aprendo `prove/vivienda-moya-opcion2/REF.OPCION 2 - quotato.dxf` (lo stesso file compresso, più facile da scaricare da GitHub: `opcion2_quotato.zip`) e controllando:
+- [ ] **Test 8 in AutoCAD sulla seconda versione** (la prima si apriva senza errori), aprendo `prove/vivienda-moya-opcion2/REF.OPCION 2 - quotato.dxf` (lo stesso file compresso, più facile da scaricare da GitHub: `opcion2_quotato.zip`) e controllando:
   - si apre senza messaggi di errore né richieste di recupero;
-  - i layer `DOMUS_QUOTE`, `DOMUS_NOTE`, `DOMUS_CARTIGLIO` esistono e si possono accendere e spegnere;
+  - i layer `DOMUS_QUOTE`, `DOMUS_QUOTE_INTERNE`, `DOMUS_NOTE`, `DOMUS_CARTIGLIO` esistono e si possono accendere e spegnere;
   - le quote si selezionano come quote (non come linee esplose) e la misura coincide con il comando DIST;
   - il cartiglio è un blocco: con un doppio clic si modificano i campi;
   - *Salva con nome → DWG* funziona, e riaprendo il DWG non manca niente.

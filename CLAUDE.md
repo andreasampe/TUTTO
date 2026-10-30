@@ -40,8 +40,10 @@ Indicazioni sue, dal documento master:
   - non dichiarare completato ciò che non è testato su file reali.
 - **Stato (30/10/2026):**
   - Fase 0 fatta (`cad/ANALISI_TECNICA.md`);
-  - Fase 1, prototipo in `cad/domus_cad/` con Python e ezdxf: 10 test (`python -m unittest discover -s tests`) e **prova su una pianta reale** (`REF.OPCION 2`, progetto spagnolo Vivienda Moya; DWG e DXF di Andrea sono sul ramo `main`). Risultato in `cad/prove/`;
-  - manca la prova in AutoCAD (test 8) e manca l'xref `00 REF_VIVIENDA MOYA`;
+  - Fase 1, prototipo in `cad/domus_cad/` con Python e ezdxf: 13 test (`python -m unittest discover -s tests`) e **prova su una pianta reale** (`REF.OPCION 2`, progetto spagnolo Vivienda Moya; DWG e DXF di Andrea sono sul ramo `main`). Risultato in `cad/prove/`;
+  - la prima versione si apre in AutoCAD, ma ad Andrea le quote non andavano bene. Le vuole come il layer `01Cotas 1` del file `03_BASICO`: in metri, con pallino, e anche **dentro le stanze**;
+  - fatta la seconda versione (`domus_cad/interne.py`: luci nette da muro a muro, muri campiti come massa, porte chiuse con una chiusura morfologica): da riprovare in AutoCAD;
+  - manca l'xref `00 REF_VIVIENDA MOYA`;
   - il file principale ha molte tavole affiancate: serve la scelta della zona;
   - avanzamento in `cad/ROADMAP.md`.
 - Flusso DWG scelto: AutoCAD *Salva con nome → DXF 2018*, poi elaborazione DOMUS, poi controllo in AutoCAD e salvataggio in DWG. CADCraft (MIT/Apache) è stato analizzato ma oggi è immaturo nel salvataggio: va rivalutato su file reali.

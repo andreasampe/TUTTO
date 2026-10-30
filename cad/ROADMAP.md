@@ -5,7 +5,7 @@ File di avanzamento del progetto (punto 17.6): va aggiornato alla fine di ogni f
 | Fase | Obiettivo | Stato |
 |---|---|---|
 | **0 — Ricognizione** | ambiente, CADCraft, alternative, licenze, strategia DWG | **completata** per quanto verificabile da qui: vedi [ANALISI_TECNICA.md](ANALISI_TECNICA.md). Restano hosting e Mac (sezione 6) |
-| **1 — Prototipo CAD** | importare, quotare, annotare, cartiglio, esportare, riaprire, verificare | **implementato, testato** (10 test automatici) **e provato su una pianta reale** (`REF.OPCION 2`, Vivienda Moya: controlli ok). **Manca:** apertura in AutoCAD (test 8) |
+| **1 — Prototipo CAD** | importare, quotare, annotare, cartiglio, esportare, riaprire, verificare | **implementato, testato** (13 test automatici) **e provato su una pianta reale** (`REF.OPCION 2`, Vivienda Moya). La prima versione si apre in AutoCAD; la seconda aggiunge le quote interne in metri nello stile dello studio. **Manca:** il test 8 sulla seconda versione |
 | 2 — Motore di elaborazione | moduli, gestione file, controlli, test | in parte già impostata (cartelle, log, rapporto) |
 | 3 — Modello dell'edificio | locali, pareti, porte, finestre, superfici, correzioni manuali | da iniziare |
 | 4 — Elaborati architettonici | stato di fatto/progetto, demolizioni e costruzioni, layer e cartigli configurabili | da iniziare |
@@ -16,12 +16,15 @@ File di avanzamento del progetto (punto 17.6): va aggiornato alla fine di ogni f
 ## Prossime attività (in ordine)
 
 1. ~~Planimetria reale~~: arrivata il 30/10/2026 (Vivienda Moya), elaborata `REF.OPCION 2`.
-2. **Andrea:** aprire `prove/vivienda-moya-opcion2/REF.OPCION 2 - quotato.dxf` in AutoCAD e confermare il test 8. Elenco dei controlli in [TEST.md](TEST.md).
+2. ~~Quote in metri, interne ed esterne, nello stile di `01Cotas 1`~~: fatto il 30/10/2026 (`domus_cad/interne.py`).
+   **Andrea:** riaprire in AutoCAD la seconda versione e dire se le quote vanno bene.
 3. **Andrea:** inviare il riferimento esterno mancante `00 REF_VIVIENDA MOYA` (DXF).
 4. **Scelta della zona** nei file con più tavole affiancate (come il file principale):
    - riconoscere automaticamente le cornici delle tavole;
    - in alternativa, `--finestra x1,y1,x2,y2`.
 5. Quote migliori:
+   - distanze tra arredi e muri (come 0.90 tra tavolo e cucina nel riferimento), dai layer dell'arredo;
+   - quote interne che evitano i nomi dei locali;
    - testo spostato fuori per le quote corte;
    - quote allineate ai muri inclinati;
    - catene per ogni tratto di facciata (facciate a gradoni);

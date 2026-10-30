@@ -14,9 +14,10 @@ from datetime import datetime
 from pathlib import Path
 
 import ezdxf
+import numpy as np
 from ezdxf import recover
 
-from . import cartiglio, lettura, quote
+from . import cartiglio, interne, lettura, quote
 
 
 def impronta(percorso: Path) -> str:
@@ -44,7 +45,8 @@ def _firma(e) -> tuple:
 
 
 def elabora(origine: str, uscita: str, *, unita: str | None = None, scala: int = 100,
-            formato: str = "cm", layer_muri: set[str] | None = None,
+            formato: str = "m", layer_muri: set[str] | None = None,
+            layer_aperture: set[str] | None = None, quote_interne: bool = True, luce_minima: float = 0.5,
             valori_cartiglio: dict[str, str] | None = None, ora: str | None = None) -> dict:
     sorgente = Path(origine)
     if sorgente.suffix.lower() != ".dxf":
@@ -78,11 +80,26 @@ def elabora(origine: str, uscita: str, *, unita: str | None = None, scala: int =
     mm_carta = m_per_u * 1000 / scala          # mm di carta per unità di disegno
     u_per_mm = 1 / mm_carta                    # unità di disegno per mm di carta
     fattore = {"cm": 100.0, "m": 1.0, "mm": 1000.0}[formato] * m_per_u
-    quote.prepara_stile(doc, altezza_testo=2.5 * u_per_mm, fattore_misura=fattore, decimali=0 if formato != "m" else 2)
+    quote.prepara_stile(doc, u_per_mm, fattore_misura=fattore, decimali=0 if formato != "m" else 2)
     punti = quote.vertici(doc, layer_muri)
-    previste = quote.calcola(punti, fascia=0.6 / m_per_u, tolleranza=0.005 / m_per_u)
-    h_quote = quote.disegna(doc, previste, passo=8 * u_per_mm, ingombro=rapporto.estensione)
-    log.append(f"Generate {len(previste)} quote su {quote.LAYER_QUOTE} (catene parziali e totali sui 4 lati)")
+    esterne = quote.calcola(punti, fascia=0.6 / m_per_u, tolleranza=0.005 / m_per_u)
+    h_quote = quote.disegna(doc, esterne, passo=8 * u_per_mm, ingombro=rapporto.estensione)
+    log.append(f"Generate {len(esterne)} quote esterne su {quote.LAYER_QUOTE} (catene parziali e totali sui 4 lati)")
+    previste = list(esterne)
+    if quote_interne:
+        seg_muri, masse = interne.geometria(doc, layer_muri, 0.01 / m_per_u, m_per_u)
+        aperture = layer_aperture if layer_aperture is not None else interne.layer_aperture(doc)
+        seg_aperture, _ = interne.geometria(doc, aperture, 0.01 / m_per_u, m_per_u) if layer_muri and aperture else (np.empty((0, 4)), [])
+        seg_chiusura = np.vstack([seg_muri, seg_aperture])
+        mappa = interne.Mappa(seg_chiusura, masse, m_per_u) if len(seg_chiusura) else None
+        luci = interne.calcola(seg_muri, mappa, m_per_u, luce_minima=luce_minima)
+        h_quote += interne.disegna(doc, luci, quote.STILE)
+        previste += luci
+        log.append(f"Generate {len(luci)} quote interne su {interne.LAYER} (luci nette tra muri affacciati, minimo {luce_minima:g} m)")
+        log.append(f"Edificio chiuso con i layer: {', '.join(sorted(aperture)) or 'nessuno'}"
+                   + (f"; parte esterna del riquadro: {mappa.quota_esterna:.0%}" if mappa else ""))
+        if mappa and mappa.quota_esterna > 0.97:
+            rapporto.problemi.append("Le quote interne non trovano l'interno dell'edificio: forse una porta o finestra non è disegnata e l'edificio risulta aperto. Indica i layer dei serramenti con --layer-aperture.")
 
     # 9-10. annotazioni e cartiglio
     ext = rapporto.estensione
@@ -141,9 +158,11 @@ def verifica(elaborato: Path, firme: dict, previste: list, h_cartiglio: str, sor
     mancanti = [h for h, f in firme.items() if (e := doc.entitydb.get(h)) is None or _firma(e) != f]
     esito(2, "Conservazione", not mancanti, "tutte le entità originali presenti e invariate" if not mancanti else f"{len(mancanti)} entità perse o alterate: {mancanti[:5]}")
     attesi = {quote.LAYER_QUOTE, cartiglio.LAYER_CARTIGLIO, cartiglio.LAYER_NOTE}
+    if any(q.lato == "interno" for q in previste):
+        attesi.add(interne.LAYER)
     presenti = {l.dxf.name for l in doc.layers}
     esito(3, "Layer", attesi <= presenti, f"presenti: {', '.join(sorted(attesi & presenti))}")
-    dims = [d for d in msp.query("DIMENSION") if d.dxf.layer == quote.LAYER_QUOTE]
+    dims = [d for d in msp.query("DIMENSION") if d.dxf.layer in (quote.LAYER_QUOTE, interne.LAYER)]
     errori = []
     for d, q in zip(dims, previste):
         misura = d.get_measurement()
@@ -162,7 +181,7 @@ def verifica(elaborato: Path, firme: dict, previste: list, h_cartiglio: str, sor
     esito(8, "Compatibilità AutoCAD", None, "da aprire in AutoCAD sul Mac: in questo ambiente AutoCAD non c'è")
     esito(9, "Integrità dell'originale", impronta(sorgente) == impronta_prima, "SHA-256 del file originale invariato")
     esito(10, "Ripetibilità", None, "verificata dai test automatici (due elaborazioni identiche)")
-    esito(11, "Costo", True, "solo software open source gratuito: Python, ezdxf (MIT)")
+    esito(11, "Costo", True, "solo software open source gratuito: Python, ezdxf (MIT), Pillow (MIT-CMU), NumPy (BSD)")
     return c
 
 
