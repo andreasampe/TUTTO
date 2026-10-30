@@ -40,14 +40,15 @@ Indicazioni sue, dal documento master:
   - non dichiarare completato ciò che non è testato su file reali.
 - **Stato (30/10/2026):**
   - Fase 0 fatta (`cad/ANALISI_TECNICA.md`);
-  - Fase 1, prototipo in `cad/domus_cad/` con Python e ezdxf, testata **solo su un esempio artificiale** (10 test con `python -m unittest discover -s tests`);
-  - mancano una planimetria reale di Andrea e la prova in AutoCAD;
+  - Fase 1, prototipo in `cad/domus_cad/` con Python e ezdxf: 10 test (`python -m unittest discover -s tests`) e **prova su una pianta reale** (`REF.OPCION 2`, progetto spagnolo Vivienda Moya; DWG e DXF di Andrea sono sul ramo `main`). Risultato in `cad/prove/`;
+  - manca la prova in AutoCAD (test 8) e manca l'xref `00 REF_VIVIENDA MOYA`;
+  - il file principale ha molte tavole affiancate: serve la scelta della zona;
   - avanzamento in `cad/ROADMAP.md`.
 - Flusso DWG scelto: AutoCAD *Salva con nome → DXF 2018*, poi elaborazione DOMUS, poi controllo in AutoCAD e salvataggio in DWG. CADCraft (MIT/Apache) è stato analizzato ma oggi è immaturo nel salvataggio: va rivalutato su file reali.
 - Decisioni di Andrea (30/10/2026):
   - **niente database dell'hosting**: dati su file (SQLite/JSON), anche se la specifica direbbe il contrario;
   - l'hosting è probabilmente **Aruba condiviso** (dettagli sconosciuti), quindi si presume che l'elaborazione CAD giri sul Mac e il sito gestisca solo progetti e file;
-  - manderà una planimetria reale in DXF.
+  - ha mandato il primo progetto reale (Vivienda Moya) il 30/10/2026.
 - Errore da non ripetere: la webapp `domus/` è stata costruita **prima** di avere questa specifica, interpretando una sola riga del documento master. **Chiedere sempre lo scopo prima di costruire.**
 
 ## DOMUS web (cartella `domus/`)

@@ -26,6 +26,7 @@ def genera(percorso: Path) -> Path:
     # finestre (sul filo esterno) e porte
     for (x1, y1, x2, y2) in ((1.6, 0, 3.0, 0), (7.4, 0, 9.0, 0), (12, 1.8, 12, 3.2), (2.0, 9, 3.6, 9), (6.6, 9, 8.0, 9)):
         msp.add_line((x1, y1), (x2, y2), dxfattribs={"layer": "FINESTRE"})
+    msp.add_circle((8.0, 2.5), 0.15, dxfattribs={"layer": "MURI"})  # pilastro circolare
     msp.add_arc((4.2, 4.55), 0.8, 0, 90, dxfattribs={"layer": "PORTE"})
     msp.add_arc((5.25, 3.6), 0.8, 90, 180, dxfattribs={"layer": "PORTE"})
     for testo, x, y in (("SOGGIORNO", 1.5, 2.2), ("CAMERA", 1.5, 6.5), ("CUCINA", 7.5, 2.2), ("BAGNO", 6.6, 6.5)):

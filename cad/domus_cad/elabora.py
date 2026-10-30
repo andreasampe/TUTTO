@@ -30,8 +30,10 @@ def _firma(e) -> tuple:
         g = (tuple(e.dxf.start), tuple(e.dxf.end))
     elif t == "LWPOLYLINE":
         g = tuple(tuple(p) for p in e.get_points("xyb")) + (e.closed,)
-    elif t in ("CIRCLE", "ARC"):
-        g = (tuple(e.dxf.center), e.dxf.radius, e.dxf.get("start_angle"), e.dxf.get("end_angle"))
+    elif t == "CIRCLE":
+        g = (tuple(e.dxf.center), e.dxf.radius)
+    elif t == "ARC":
+        g = (tuple(e.dxf.center), e.dxf.radius, e.dxf.start_angle, e.dxf.end_angle)
     elif t in ("TEXT", "MTEXT"):
         g = (e.plain_text() if t == "MTEXT" else e.dxf.text, tuple(e.dxf.insert))
     elif t == "INSERT":
