@@ -56,6 +56,11 @@ check('cambio di stato dalla bacheca', $s === 200 && $p0['status'] === 'concluso
 [$s] = call('PUT', "projects/{$list[0]['id']}/status", ['status' => 'boh']);
 check('stato non valido rifiutato', $s === 422);
 
+$ch = curl_init("$base/api.php?r=projects/{$list[count($list) - 1]['id']}/quote");
+curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_COOKIEFILE => $jar]);
+$q = (string) curl_exec($ch);
+check('preventivo PDF', curl_getinfo($ch, CURLINFO_CONTENT_TYPE) === 'application/pdf' && str_starts_with($q, '%PDF') && str_contains($q, 'Proposta di parcella'));
+
 [$s, $rep] = call('GET', 'reports');
 check('statistiche: 12 mesi e incassi', count($rep['months']) === 12 && array_sum($rep['paid']) > 0 && count($rep['hours_projects']) > 0, array_keys($rep));
 check('statistiche: tempi delle pratiche', (int) $rep['permits']['approved'] === 2 && $rep['permits']['avg_days'] > 0, $rep['permits']);

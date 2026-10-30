@@ -548,7 +548,8 @@
           stat('Da incassare', s.to_collect)),
         s.fee ? h('div', { class: 'money-bar', title: 'Incassato / fatturato / onorario' },
           h('i', { class: 'paid', style: `width:${pct(s.paid)}%` }), h('i', { class: 'inv', style: `width:${pct(s.invoiced - s.paid)}%` })) : null,
-        h('div', { class: 'toolbar mt' }, h('h3', { class: 'section-title', style: 'margin:0;flex:1' }, 'Rate e fatture'), add),
+        h('div', { class: 'toolbar mt' }, h('h3', { class: 'section-title', style: 'margin:0;flex:1' }, 'Rate e fatture'),
+          h('a', { class: 'btn', href: `api.php?r=projects/${id}/quote`, target: '_blank', rel: 'noopener' }, D.icon('file', 15), 'Preventivo PDF'), add),
         items.length
           ? h('div', { class: 'card table-wrap', style: 'padding:14px 8px 6px' }, h('table', {},
             h('thead', {}, h('tr', {}, h('th', {}, 'Voce'), h('th', { class: 'num' }, 'Importo'), h('th', { class: 'hide-sm' }, 'Prevista'), h('th', {}, 'Stato'), h('th', { class: 'no-print' }, ''))),

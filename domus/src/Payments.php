@@ -53,6 +53,39 @@ final class Payments
         ];
     }
 
+    // Preventivo in PDF con le rate del progetto.
+    public static function quotePdf(int $projectId): never
+    {
+        $p = Db::one(
+            'SELECT p.*, c.name AS client_name, c.address AS client_address, c.city AS client_city, c.tax_code, c.vat
+             FROM projects p LEFT JOIN clients c ON c.id = p.client_id WHERE p.id = ?',
+            [$projectId]
+        );
+        if (!$p) {
+            throw new HttpError(404, 'Progetto non trovato');
+        }
+        $items = Db::all('SELECT * FROM payments WHERE project_id = ? ORDER BY due_date IS NULL, due_date, id', [$projectId]);
+        $rows = $items
+            ? array_map(fn ($r) => [$r['description'], $r['due_date'] ? date('d/m/Y', strtotime($r['due_date'])) : '-', (float) $r['amount']], $items)
+            : [['Onorario professionale', '-', (float) $p['fee']]];
+        $meta = array_values(array_filter([
+            $p['client_name'] ? 'Spett.le ' . $p['client_name'] : null,
+            trim(($p['client_address'] ?? '') . ' ' . ($p['client_city'] ?? '')) ?: null,
+            $p['vat'] ? 'P.IVA ' . $p['vat'] : ($p['tax_code'] ? 'C.F. ' . $p['tax_code'] : null),
+            '',
+            'Oggetto: ' . $p['title'] . ' (' . $p['code'] . ')',
+            trim(($p['intervention'] ?? '') . ' - ' . ($p['address'] ?? '') . ' ' . ($p['city'] ?? ''), ' -'),
+        ], fn ($v) => $v !== null));
+        $notes = 'Gli importi si intendono al netto di contributo integrativo e IVA di legge. Le rate sono fatturate al raggiungimento '
+            . 'di ciascuna fase. Il presente preventivo ha validità 60 giorni dalla data di emissione.';
+        $pdf = Pdf::quote(Settings::get('studio_name') ?: 'Studio di architettura', 'Proposta di parcella', $meta, $rows, $notes);
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: inline; filename="preventivo-' . $p['code'] . '.pdf"');
+        header('Content-Length: ' . strlen($pdf));
+        echo $pdf;
+        exit;
+    }
+
     public static function create(array $in): int
     {
         $data = self::clean($in);

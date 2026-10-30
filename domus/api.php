@@ -127,6 +127,7 @@ try {
         $resource === 'hours' && $id !== null && $method === 'DELETE' => $ok(fn () => Hours::delete($user, $id)),
 
         // ---------- solo amministratore ----------
+        $resource === 'projects' && $id !== null && $sub === 'quote' && $method === 'GET' => $admin() ? Payments::quotePdf($id) : null,
         $resource === 'payments' && $id === null && $method === 'POST' => $admin() ? ['id' => Payments::create($in)] : null,
         $resource === 'payments' && $id !== null && $method === 'PUT' => $admin() ? $ok(fn () => Payments::update($id, $in)) : null,
         $resource === 'payments' && $id !== null && $method === 'DELETE' => $admin() ? $ok(fn () => Payments::delete($id)) : null,

@@ -37,8 +37,75 @@ final class Pdf
         }
         $c[] = '0.8 0.8 0.8 RG 0.6 w 40 60 m 555 60 l S';
         $c[] = 'BT /F1 8 Tf 0.5 0.5 0.5 rg 40 45 Td (Documento dimostrativo generato da DOMUS il ' . date('d/m/Y') . ') Tj ET';
-        $stream = implode("\n", $c);
+        return self::build(implode("\n", $c));
+    }
 
+    /**
+     * Preventivo / proposta di parcella: intestazione dello studio, destinatario, voci con importi allineati, totale.
+     * @param list<array{0:string,1:string,2:float}> $rows [voce, scadenza, importo]
+     * @param list<string> $meta righe sotto il titolo (cliente, progetto, luogo…)
+     */
+    public static function quote(string $studio, string $title, array $meta, array $rows, string $notes): string
+    {
+        $c = [];
+        $c[] = '0.06 0.06 0.06 rg 0 772 595 70 re f';
+        $c[] = 'BT /F2 11 Tf 1 1 1 rg 40 812 Td (' . self::esc(mb_strtoupper($studio)) . ') Tj ET';
+        $c[] = 'BT /F1 8 Tf 0.65 0.65 0.65 rg 40 796 Td (DOMUS  -  INTELLIGENT BUILDING DESIGN) Tj ET';
+        $c[] = 'BT /F1 9 Tf 0.85 0.85 0.85 rg 430 812 Td (' . self::esc('Firenze, ' . date('d/m/Y')) . ') Tj ET';
+        $c[] = 'BT /F2 22 Tf 0.07 0.07 0.07 rg 40 722 Td (' . self::esc($title) . ') Tj ET';
+        $y = 698;
+        foreach ($meta as $line) {
+            $c[] = 'BT /F1 10.5 Tf 0.3 0.3 0.3 rg 40 ' . $y . ' Td (' . self::esc($line) . ') Tj ET';
+            $y -= 16;
+        }
+        $y -= 14;
+        $c[] = "0.07 0.07 0.07 RG 0.8 w 40 $y m 555 $y l S";
+        $c[] = 'BT /F2 8 Tf 0.45 0.45 0.45 rg 40 ' . ($y + 8) . ' Td (VOCE) Tj ET';
+        $c[] = 'BT /F2 8 Tf 0.45 0.45 0.45 rg 360 ' . ($y + 8) . ' Td (PREVISTA) Tj ET';
+        $c[] = 'BT /F2 8 Tf 0.45 0.45 0.45 rg 515 ' . ($y + 8) . ' Td (IMPORTO) Tj ET';
+        $y -= 22;
+        $total = 0.0;
+        foreach ($rows as [$desc, $due, $amount]) {
+            $total += $amount;
+            $money = self::money($amount);
+            $c[] = 'BT /F1 11 Tf 0.1 0.1 0.1 rg 40 ' . $y . ' Td (' . self::esc($desc) . ') Tj ET';
+            $c[] = 'BT /F1 10 Tf 0.4 0.4 0.4 rg 360 ' . $y . ' Td (' . self::esc($due) . ') Tj ET';
+            $c[] = 'BT /F1 11 Tf 0.1 0.1 0.1 rg ' . self::right(555, $money, 11) . " $y Td (" . self::esc($money) . ') Tj ET';
+            $c[] = '0.85 0.85 0.85 RG 0.4 w 40 ' . ($y - 9) . ' m 555 ' . ($y - 9) . ' l S';
+            $y -= 26;
+        }
+        $y -= 6;
+        $tot = self::money($total);
+        $c[] = 'BT /F1 9 Tf 0.45 0.45 0.45 rg 250 ' . $y . ' Td (TOTALE, oltre IVA e cassa) Tj ET';
+        $c[] = 'BT /F2 15 Tf 0.07 0.07 0.07 rg ' . self::right(555, $tot, 15, true) . " $y Td (" . self::esc($tot) . ') Tj ET';
+        $y -= 44;
+        foreach (explode("\n", wordwrap($notes, 95, "\n", true)) as $line) {
+            $c[] = 'BT /F1 9.5 Tf 0.35 0.35 0.35 rg 40 ' . $y . ' Td (' . self::esc($line) . ') Tj ET';
+            $y -= 14;
+        }
+        $c[] = '0.8 0.8 0.8 RG 0.6 w 40 90 m 250 90 l S';
+        $c[] = 'BT /F1 8.5 Tf 0.45 0.45 0.45 rg 40 76 Td (Per accettazione - data e firma del committente) Tj ET';
+        $c[] = 'BT /F1 8 Tf 0.55 0.55 0.55 rg 40 40 Td (' . self::esc($studio . ' - documento generato da DOMUS') . ') Tj ET';
+        return self::build(implode("\n", $c));
+    }
+
+    private static function money(float $v): string
+    {
+        return number_format($v, 2, ',', '.') . ' EUR';
+    }
+
+    // Posizione x per allineare a destra (larghezze medie dei caratteri Helvetica).
+    private static function right(float $edge, string $text, float $size, bool $bold = false): float
+    {
+        $w = 0.0;
+        foreach (str_split($text) as $ch) {
+            $w += ctype_digit($ch) ? 0.556 : ($ch === '.' || $ch === ',' || $ch === ' ' ? 0.278 : ($bold ? 0.70 : 0.65));
+        }
+        return round($edge - $w * $size, 2);
+    }
+
+    private static function build(string $stream): string
+    {
         $objs = [
             '<< /Type /Catalog /Pages 2 0 R >>',
             '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
