@@ -91,6 +91,14 @@ class Ritocchi(unittest.TestCase):
         d = next(x for x in doc.modelspace().query("DIMENSION") if x.dxf.handle == next(q["h"] for q in nuove if q["testo"] == "4.90"))
         self.assertLess(d.dxf.defpoint2.x, d.dxf.defpoint3.x)
 
+    def test_quota_nuova_con_testo_spostato(self):
+        res, m, _ = self.ritocca([{"azione": "aggiungi", "p1": [0.3, 1.0], "p2": [5.2, 1.0], "base": [2.0, 2.0], "angolo": 0, "pos": [1.0, 2.4]}])
+        self.assertTrue(res["superato"], res)
+        q = next(q for q in m["quote"] if q["h"] not in {x["h"] for x in self.modello["quote"]})
+        self.assertEqual(q["testo"], "4.90")
+        self.assertAlmostEqual(q["pt"][0], 1.0, places=3)
+        self.assertAlmostEqual(q["pt"][1], 2.4, places=3)
+
     def test_quota_con_punti_coincidenti_rifiutata(self):
         res, _, _ = self.ritocca([{"azione": "aggiungi", "p1": [1, 1], "p2": [1, 3], "base": [0, 0], "angolo": 0}])
         self.assertFalse(res["superato"])

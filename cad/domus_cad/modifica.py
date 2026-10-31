@@ -182,7 +182,8 @@ def applica(doc: Drawing, modifiche: list[dict], profilo: dict | None = None) ->
                     raise ValueError("i due punti coincidono nella direzione della quota")
                 if angolo > 90.5 or angolo <= -89.5:  # testo leggibile: da sinistra a destra o dal basso in alto
                     angolo = angolo - 180 if angolo > 90.5 else angolo + 180
-                nuova = aggiungi_quota(doc, tuple(base), tuple(p1), tuple(p2), angolo, layer, stile, dict(override))
+                testo = tuple(m["pos"]) if m.get("pos") else None  # testo spostato prima di salvare
+                nuova = aggiungi_quota(doc, tuple(base), tuple(p1), tuple(p2), angolo, layer, stile, dict(override), testo_in=testo)
                 aggiunte[nuova] = attesa
                 fatte.append(azione)
             except Exception as err:

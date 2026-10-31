@@ -192,7 +192,8 @@
     // --- trascinamento: sfondo = sposta la vista; quota = sposta linea o testo ---
     let trascina = null;
     svg.addEventListener('pointerdown', (ev) => {
-      if (!modello) return;
+      if (!modello || ev.button === 2) return; // tasto destro: menu dei comandi
+      chiudiMenu();
       const g = ev.target.closest('[data-h]');
       svg.setPointerCapture(ev.pointerId);
       if (aggiunta) { // si può sempre spostare la vista; un clic senza trascinare sceglie il punto
@@ -246,7 +247,12 @@
       if (!t || t.tipo === 'vista' || !t.tipo) return;
       const a = anteprima.get(t.h);
       anteprima.delete(t.h);
-      if (t.mosso && a) {
+      const nuova = modifiche.get(`${t.h}|aggiungi`);
+      if (t.mosso && a && nuova) { // quota non ancora salvata: si cambia la quota stessa
+        const q = quota(t.h);
+        if (t.tipo === 'linea') { nuova.base = a.base; q.base = a.base; if (a.pt) { nuova.pos = a.pt; q.pt = a.pt; } }
+        else { nuova.pos = a.pt; q.pt = a.pt; q.ptLibero = true; }
+      } else if (t.mosso && a) {
         if (t.tipo === 'linea') registra(`${t.h}|linea`, { h: t.h, azione: 'sposta_linea', base: a.base }, 'Linea di quota spostata');
         else registra(`${t.h}|testo`, { h: t.h, azione: 'sposta_testo', pos: a.pt }, 'Testo di quota spostato');
       }
@@ -270,7 +276,16 @@
     function angoloNuova(p1, p2, c) {
       if (orientamento === 'orizzontale') return 0;
       if (orientamento === 'verticale') return 90;
-      if (orientamento === 'allineata') return Math.atan2(p2[1] - p1[1], p2[0] - p1[0]) * 180 / Math.PI;
+      const allineata = Math.atan2(p2[1] - p1[1], p2[0] - p1[0]) * 180 / Math.PI;
+      if (orientamento === 'allineata') return allineata;
+      // automatica: due punti in obliquo (es. su un muro inclinato) e linea messa accanto al tratto
+      // → quota allineata; cursore sopra, sotto o di lato → orizzontale o verticale, come in AutoCAD
+      const obliqua = Math.min(((allineata % 90) + 90) % 90, 90 - ((allineata % 90) + 90) % 90) > 2;
+      if (obliqua) {
+        const L2 = (p2[0] - p1[0]) ** 2 + (p2[1] - p1[1]) ** 2;
+        const t = ((c[0] - p1[0]) * (p2[0] - p1[0]) + (c[1] - p1[1]) * (p2[1] - p1[1])) / L2;
+        if (t > 0.05 && t < 0.95) return allineata;
+      }
       const fuoriX = Math.max(Math.min(p1[0], p2[0]) - c[0], c[0] - Math.max(p1[0], p2[0]), 0);
       const fuoriY = Math.max(Math.min(p1[1], p2[1]) - c[1], c[1] - Math.max(p1[1], p2[1]), 0);
       if (Math.abs(p2[0] - p1[0]) < 1e-9) return 90;
@@ -297,7 +312,6 @@
     }
     function disegnaNuove() {
       const figli = [];
-      for (const [k, m] of modifiche) if (k.endsWith('|aggiungi')) figli.push(disegnaQuotaNuova(m.p1, m.p2, m.base, m.angolo, 'mod'));
       if (aggiunta?.c) {
         const r = 6 * vista.w / svg.clientWidth;
         for (const p of [aggiunta.p1, aggiunta.p2].filter(Boolean)) figli.push(s('circle', { class: 'q-scelto', cx: p[0], cy: p[1], r }));
@@ -323,9 +337,13 @@
       const { misura } = quotaNuova(aggiunta.p1, aggiunta.p2, base, angolo);
       if (misura < 1e-9) { D.toast('I due punti coincidono in questa direzione: sposta il cursore o cambia orientamento', true); return; }
       nuove += 1;
-      registra(`nuova${nuove}|aggiungi`, { azione: 'aggiungi', p1: aggiunta.p1, p2: aggiunta.p2, base, angolo }, `Quota aggiunta (${(misura * fattoreMetri()).toFixed(2)})`);
+      const hq = `nuova${nuove}`, testo = (misura * fattoreMetri()).toFixed(2);
+      registra(`${hq}|aggiungi`, { azione: 'aggiungi', p1: aggiunta.p1, p2: aggiunta.p2, base, angolo }, `Quota aggiunta (${testo})`);
+      // da subito è una quota come le altre: si seleziona, si trascina, si elimina
+      modello.quote.push({ h: hq, nuova: true, l: 'nuova', stile: 'dello studio', tipo: 'lineare', testo, ht: altezzaTesto,
+        p1: aggiunta.p1, p2: aggiunta.p2, base, ang: angolo, pt: null, ptLibero: false });
       aggiunta = { c: null }; // pronta per un'altra quota
-      disegnaNuove(); disegnaPannello();
+      disegnaQuota(quota(hq)); disegnaNuove(); disegnaPannello();
     }
     function iniziaAggiunta() { seleziona(null); aggiunta = { c: null }; svg.classList.add('aggiunta'); disegnaPannello(); }
     function fineAggiunta() { aggiunta = null; svg.classList.remove('aggiunta'); disegnaNuove(); disegnaPannello(); }
@@ -433,7 +451,15 @@
       modifiche.delete(chiave);
       const i = ordine.indexOf(chiave);
       if (i >= 0) ordine.splice(i, 1);
+      if (chiave.endsWith('|aggiungi') && modello) { // quota nuova: sparisce del tutto
+        const hq = chiave.split('|')[0];
+        modello.quote = modello.quote.filter((q) => q.h !== hq);
+        strati.quote.querySelector(`[data-h="${hq}"]`)?.remove();
+        if (selezione?.h === hq) selezione = null;
+      }
     }
+    function annullaTutte() { [...ordine].forEach(annulla); modifiche.clear(); ordine.length = 0; }
+    function annullaQuota(hq) { [...ordine].filter((k) => k.startsWith(`${hq}|`)).forEach(annulla); }
     const elencoModifiche = () => {
       const lista = [];
       for (const k of ordine) {
@@ -456,6 +482,66 @@
       disegnaPannello();
     }
 
+    // --- comandi su quote e testi (pannello e menu col tasto destro) ---
+    const dopo = () => { ridisegnaQuote(); disegnaPannello(); };
+    function azioniQuota(q) {
+      const a = attuale(q);
+      const voci = [];
+      if (q.tipo !== 'altro' && !a.eliminata && (a.pt || q.ptLibero)) {
+        voci.push(['Testo al centro', () => {
+          if (q.nuova) { delete modifiche.get(`${q.h}|aggiungi`).pos; q.pt = null; q.ptLibero = false; }
+          else registra(`${q.h}|centro`, { h: q.h, azione: 'testo_al_centro' }, 'Testo rimesso al centro');
+          dopo();
+        }]);
+      }
+      if (!q.nuova && !a.eliminata && ordine.some((k) => k.startsWith(`${q.h}|`))) voci.push(['Annulla le modifiche di questa quota', () => { annullaQuota(q.h); dopo(); }]);
+      if (a.eliminata) voci.push(['Ripristina quota', () => { annulla(`${q.h}|elimina`); dopo(); }]);
+      else if (q.nuova) voci.push(['Elimina quota', () => { annulla(`${q.h}|aggiungi`); dopo(); }, true]);
+      else voci.push(['Elimina quota', () => { registra(`${q.h}|elimina`, { h: q.h, azione: 'elimina' }, 'Quota eliminata'); dopo(); }, true]);
+      return voci;
+    }
+
+    const menu = h('div', { class: 'plan-menu', role: 'menu', hidden: true });
+    tela.append(menu);
+    function chiudiMenu() { menu.hidden = true; }
+    function apriMenu(ev, titolo, voci) {
+      const r = tela.getBoundingClientRect();
+      menu.replaceChildren(h('div', { class: 'plan-menu-title' }, titolo), ...voci.map(([etichetta, fn, pericolo]) =>
+        h('button', { type: 'button', role: 'menuitem', class: pericolo ? 'danger' : '', onclick: () => { chiudiMenu(); fn(); } }, etichetta)));
+      menu.hidden = false;
+      const x = Math.min(ev.clientX - r.left, r.width - menu.offsetWidth - 8);
+      const y = Math.min(ev.clientY - r.top, r.height - menu.offsetHeight - 8);
+      menu.style.left = `${Math.max(8, x)}px`;
+      menu.style.top = `${Math.max(8, y)}px`;
+      menu.querySelector('button')?.focus();
+    }
+    svg.addEventListener('contextmenu', (ev) => {
+      ev.preventDefault();
+      if (!modello) return;
+      if (aggiunta) fineAggiunta();
+      const g = ev.target.closest('[data-h]');
+      if (g && g.dataset.k === 'quota' && quota(g.dataset.h)) {
+        const q = quota(g.dataset.h);
+        seleziona({ tipo: 'quota', h: q.h });
+        apriMenu(ev, `Quota ${q.testo || ''}`, azioniQuota(q));
+      } else if (g && g.dataset.k === 'testo') {
+        seleziona({ tipo: 'testo', h: g.dataset.h });
+        apriMenu(ev, 'Testo', [['Modifica testo', () => pannello.querySelector('textarea')?.focus()]]);
+      } else {
+        const punto = puntoDisegno(ev);
+        const voci = [
+          ['Aggiungi quota da qui', () => { iniziaAggiunta(); aggiunta.p1 = aggancia(punto).p; disegnaNuove(); disegnaPannello(); }],
+          ['Aggiungi quota', iniziaAggiunta],
+          ['Tutto il disegno', adatta],
+        ];
+        const ultima = [...ordine].reverse().find((k) => modifiche.has(k));
+        if (ultima) voci.push([`Annulla: ${modifiche.get(ultima).etichetta.toLowerCase()}`, () => { annulla(ultima); disegnaTutto(); disegnaPannello(); }]);
+        apriMenu(ev, 'Pianta', voci);
+      }
+    });
+    document.addEventListener('pointerdown', (ev) => { if (!menu.hidden && !menu.contains(ev.target)) chiudiMenu(); });
+    document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') chiudiMenu(); });
+
     // --- pannello laterale ---
     const statoMotore = h('div', { class: 'item-meta plan-engine' });
     D.cad.ascolta((t) => { statoMotore.textContent = t; });
@@ -469,19 +555,15 @@
         statoMotore));
 
       // selezione
-      if (selezione?.tipo === 'quota' && modello) {
+      if (selezione?.tipo === 'quota' && modello && quota(selezione.h)) {
         const q = quota(selezione.h);
-        const a = attuale(q);
         parti.push(h('section', { class: 'plan-box' },
-          h('div', { class: 'eyebrow' }, 'Quota selezionata'),
+          h('div', { class: 'eyebrow' }, q.nuova ? 'Quota nuova · non ancora salvata' : 'Quota selezionata'),
           h('div', { class: 'plan-misura' }, q.testo || '—'),
-          h('div', { class: 'item-meta' }, `${q.l} · stile ${q.stile}${q.tipo === 'altro' ? ' · si può solo eliminare' : ''}`),
-          q.tipo !== 'altro' ? h('p', { class: 'small muted' }, 'Trascina la linea per spostarla (la misura non cambia) oppure il numero per spostare solo il testo.') : null,
-          h('div', { class: 'plan-actions' },
-            q.tipo !== 'altro' && (a.pt || q.ptLibero) ? h('button', { class: 'btn small', onclick: () => { registra(`${q.h}|centro`, { h: q.h, azione: 'testo_al_centro' }, 'Testo rimesso al centro'); ridisegnaQuote(); disegnaPannello(); } }, 'Testo al centro') : null,
-            a.eliminata
-              ? h('button', { class: 'btn small', onclick: () => { annulla(`${q.h}|elimina`); ridisegnaQuote(); disegnaPannello(); } }, 'Ripristina')
-              : h('button', { class: 'btn small danger', onclick: () => { registra(`${q.h}|elimina`, { h: q.h, azione: 'elimina' }, 'Quota eliminata'); ridisegnaQuote(); disegnaPannello(); } }, D.icon('trash', 13), 'Elimina quota'))));
+          h('div', { class: 'item-meta' }, q.nuova ? 'layer e stile dello studio' : `${q.l} · stile ${q.stile}${q.tipo === 'altro' ? ' · si può solo eliminare' : ''}`),
+          q.tipo !== 'altro' ? h('p', { class: 'small muted' }, 'Trascina la linea per spostarla (la misura non cambia) oppure il numero per spostare solo il testo. Tasto destro per gli altri comandi.') : null,
+          h('div', { class: 'plan-actions' }, azioniQuota(q).map(([etichetta, fn, pericolo]) =>
+            h('button', { class: `btn small${pericolo ? ' danger' : ''}`, onclick: fn }, pericolo ? D.icon('trash', 13) : null, etichetta)))));
       } else if (selezione?.tipo === 'testo' && modello) {
         const t = modello.testi.find((x) => x.h === selezione.h);
         const area = D.textarea('valore', modifiche.get(`${t.h}|valore`)?.valore ?? t.t, { rows: 3 });
@@ -494,7 +576,7 @@
             disegnaTutto(); disegnaPannello();
           } }, 'Applica'))));
       } else if (aggiunta) {
-        const passo = !aggiunta.p1 ? 'Clicca il primo punto: il cursore si aggancia agli spigoli del disegno.'
+        const passo = !aggiunta.p1 ? 'Clicca il primo punto: il cursore si aggancia agli spigoli del disegno. Con «Automatica» la quota è orizzontale o verticale, oppure allineata se metti la linea accanto a un tratto inclinato.'
           : !aggiunta.p2 ? 'Clicca il secondo punto.'
             : 'Muovi il mouse per scegliere dove mettere la linea e clicca.';
         parti.push(h('section', { class: 'plan-box' },
@@ -521,7 +603,7 @@
         n ? nota : null,
         h('div', { class: 'plan-actions' },
           h('button', { class: 'btn primary small', disabled: !n || !modello, onclick: (e) => salva(e.currentTarget, nota.value) }, D.icon('check', 14), 'Salva nuova versione'),
-          n ? h('button', { class: 'btn ghost small', onclick: () => { modifiche.clear(); ordine.length = 0; disegnaTutto(); disegnaPannello(); } }, 'Annulla tutte') : null)));
+          n ? h('button', { class: 'btn ghost small', onclick: () => { annullaTutte(); disegnaTutto(); disegnaPannello(); } }, 'Annulla tutte') : null)));
 
       // azioni sulla planimetria
       parti.push(h('section', { class: 'plan-box' },

@@ -589,6 +589,12 @@ a.hbar-label:hover { color: #fff; }
 .plan-svg .q-aggancio { fill: none; stroke: var(--green); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
 .plan-svg .q-cursore { fill: none; stroke: var(--ink-3); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .plan-svg .q-scelto { fill: var(--amber); }
+.plan-menu { position: absolute; z-index: 5; min-width: 220px; background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 10px; box-shadow: var(--shadow); padding: 6px; display: grid; }
+.plan-menu[hidden] { display: none; }
+.plan-menu-title { font-size: 10.5px; letter-spacing: .22em; text-transform: uppercase; color: var(--ink-3); padding: 6px 10px 8px; }
+.plan-menu button { background: none; border: 0; color: var(--ink); font: inherit; font-size: 13.5px; text-align: left; padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+.plan-menu button:hover, .plan-menu button:focus-visible { background: var(--surface-3); outline: none; }
+.plan-menu button.danger { color: var(--red); }
 .plan-overlay { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 14px; background: rgba(10, 10, 10, .72); color: var(--ink-2); font-size: 13px; text-align: center; padding: 20px; }
 .plan-overlay[hidden] { display: none; }
 .spinner { width: 28px; height: 28px; border: 1.5px solid var(--line-3); border-top-color: var(--ink); border-radius: 50%; animation: gira 1s linear infinite; }

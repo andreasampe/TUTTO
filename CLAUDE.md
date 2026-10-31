@@ -83,7 +83,7 @@ Indicazioni sue, dal documento master:
     - lato motore `cad/domus_cad/modifica.py` e `webapi.py`.
   - **Attenzione:** ezdxf al salvataggio scriveva i suoi predefiniti ISO negli stili di quota (virgola, zeri tolti), alterando lo stile dello studio. Ora `profilo.fissa_stili` scrive prima i predefiniti di AutoCAD: va chiamato prima di ogni `saveas`.
   - Andrea sta installando DOMUS in Local (cartella `domus` copiata in `public`).
-  - **Da fare, richiesto da Andrea:** rendere modificabili ed eliminabili le quote appena aggiunte; menu col tasto destro sulla pianta (es. su una quota → Elimina quota). Dettagli in fondo a `cad/ROADMAP.md`.
+  - Fatto il 31/10/2026: quote appena aggiunte modificabili ed eliminabili, menu col tasto destro, quote allineate in automatico sui tratti inclinati.
 - Flusso DWG scelto: AutoCAD *Salva con nome → DXF 2018*, poi elaborazione DOMUS, poi controllo in AutoCAD e salvataggio in DWG. CADCraft (MIT/Apache) è stato analizzato ma oggi è immaturo nel salvataggio: va rivalutato su file reali.
 - Decisioni di Andrea (30/10/2026):
   - **niente database dell'hosting**: dati su file (SQLite/JSON), anche se la specifica direbbe il contrario;
