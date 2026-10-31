@@ -88,9 +88,10 @@
     },
 
     // Applica i ritocchi: restituisce { byte, resoconto }.
-    async ritocca(byte, modifiche) {
+    // profilo: testo JSON del profilo dello studio, per layer e stile delle quote aggiunte (vuoto = predefinito)
+    async ritocca(byte, modifiche, profilo = '') {
       const origine = await D.cad.scrivi('origine.dxf', byte);
-      const resoconto = await D.cad.chiama('ritocca', origine, '/lavoro/ritoccato.dxf', JSON.stringify(modifiche));
+      const resoconto = await D.cad.chiama('ritocca', origine, '/lavoro/ritoccato.dxf', JSON.stringify(modifiche), profilo || '');
       return { byte: await D.cad.leggiFile('/lavoro/ritoccato.dxf'), resoconto };
     },
 

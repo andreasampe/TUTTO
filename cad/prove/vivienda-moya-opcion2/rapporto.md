@@ -61,3 +61,7 @@ Layer, stile e scala vengono dal profilo `profili/studio.json`, ricavato in auto
 - Stanze con un muro inclinato: solo la distanza minima e la massima (garage 3.14 e 3.52, bagno 1.72 e 1.77).
 - Disposizione: la linea si sposta lungo il tratto misurato; il testo resta tra i suoi pallini o subito accanto ed evita testi, linee di quota e il disegno esistente (35 testi spostati su 102).
 - Pallini: il trattino del blocco _DOT punta sempre dentro la quota (prima, con i punti invertiti, la linea "sbordava").
+
+## Stili di quota (31/10/2026)
+
+Prima di salvare, DOMUS scrive negli stili i valori predefiniti di AutoCAD che mancano (`profilo.fissa_stili`). Senza questo passaggio ezdxf scriveva i suoi predefiniti ISO (virgola, zeri tolti, testo sopra la linea) e lo stile `50` dello studio cambiava. Le versioni precedenti di questo file avevano lo stile alterato.

@@ -75,6 +75,55 @@ class Ritocchi(unittest.TestCase):
         # il blocco grafico della quota eliminata non resta nel file
         self.assertNotIn(q["h"], [e.dxf.handle for e in ezdxf.readfile(uscita).modelspace()])
 
+    def test_aggiungi_quota_sul_layer_dello_studio(self):
+        # tra i due spigoli interni del soggiorno: 0,3 → 5,2 = 4,90 m, linea a y = 2
+        res, m, uscita = self.ritocca([
+            {"azione": "aggiungi", "p1": [5.2, 1.0], "p2": [0.3, 1.0], "base": [2.0, 2.0], "angolo": 0},
+            {"azione": "aggiungi", "p1": [0.3, 0.3], "p2": [0.3, 4.5], "base": [1.0, 2.0], "angolo": 90},
+        ])
+        self.assertTrue(res["superato"], res)
+        self.assertEqual(res["riepilogo"]["aggiungi"], 2)
+        nuove = [q for q in m["quote"] if q["h"] not in {x["h"] for x in self.modello["quote"]}]
+        self.assertEqual(sorted(q["testo"] for q in nuove), ["4.20", "4.90"])
+        self.assertTrue(all(q["l"] == "01Cotas 1" and q["stile"] == "50" for q in nuove))
+        # pallini con il trattino verso l'interno anche se i punti sono dati al contrario
+        doc = ezdxf.readfile(uscita)
+        d = next(x for x in doc.modelspace().query("DIMENSION") if x.dxf.handle == next(q["h"] for q in nuove if q["testo"] == "4.90"))
+        self.assertLess(d.dxf.defpoint2.x, d.dxf.defpoint3.x)
+
+    def test_quota_con_punti_coincidenti_rifiutata(self):
+        res, _, _ = self.ritocca([{"azione": "aggiungi", "p1": [1, 1], "p2": [1, 3], "base": [0, 0], "angolo": 0}])
+        self.assertFalse(res["superato"])
+        self.assertIn("coincidono", res["errori"][0])
+
+    def test_stili_di_quota_dello_studio_non_cambiano(self):
+        # stile come lo scrive AutoCAD: senza i valori predefiniti (separatore, zeri, posizione del testo)
+        doc = ezdxf.new("R2018")
+        doc.dimstyles.new("STUDIO", dxfattribs={"dimtxt": 0.1, "dimdec": 2})
+        sorgente = self.dir / "stile.dxf"
+        doc.saveas(sorgente)
+        righe = sorgente.read_text().splitlines()
+        coppie = [(righe[i], righe[i + 1]) for i in range(0, len(righe) - 1, 2)]
+        tolti, dentro, out = 0, False, []
+        for codice, valore in coppie:
+            if codice.strip() == "0":
+                dentro = False
+            if codice.strip() == "2" and valore == "STUDIO" and out and out[-1][1] == "AcDbDimStyleTableRecord":
+                dentro = True
+            if dentro and codice.strip() in ("73", "74", "77", "78", "278"):
+                tolti += 1
+                continue
+            out.append((codice, valore))
+        self.assertEqual(tolti, 5)
+        sorgente.write_text("\n".join(x for c in out for x in c) + "\n")
+        self.assertFalse(ezdxf.readfile(sorgente).dimstyles.get("STUDIO").dxf.hasattr("dimdsep"))
+        uscita = self.dir / "stile_out.dxf"
+        webapi.ritocca(str(sorgente), str(uscita), "[]")
+        ds = ezdxf.readfile(uscita).dimstyles.get("STUDIO")
+        # come li intende AutoCAD (1.50 con il punto, zeri visibili, testo al centro e orizzontale), non ISO
+        self.assertEqual((ds.dxf.dimdsep, ds.dxf.dimzin, ds.dxf.dimtad, ds.dxf.dimtih, ds.dxf.dimtoh), (ord("."), 0, 0, 1, 1))
+        self.assertEqual((ds.dxf.dimtxt, ds.dxf.dimdec), (0.1, 2))
+
     def test_cambia_un_testo(self):
         t = next(t for t in self.modello["testi"] if t["t"] == "CUCINA")
         res, m, _ = self.ritocca([{"h": t["h"], "azione": "testo", "valore": "CUCINA ABITABILE"}])

@@ -71,6 +71,7 @@ Local Sites/DOMUS/
   - sul layer e con lo stile dello studio;
   - cartiglio compilato.
 - **Ritocchi**:
+  - **Aggiungi quota**: clicca due punti (il cursore si aggancia agli spigoli del disegno), poi dove mettere la linea. La direzione è automatica come in AutoCAD (orizzontale se il cursore è sopra o sotto, verticale se è di lato) oppure si sceglie: orizzontale, verticale, allineata. La quota va sul layer e con lo stile dello studio;
   - clicca una quota e trascina la linea (la misura non cambia) o il numero (si sposta solo il testo), oppure eliminala;
   - clicca un testo per correggerlo;
   - i campi del cartiglio sono nel pannello a destra;

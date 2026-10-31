@@ -6,7 +6,7 @@
 python3 -m unittest discover -s tests
 ```
 
-22 test, tutti superati il 30/10/2026 (Python 3.13, ezdxf 1.4.2). Usano `esempi/esempio_artificiale.dxf`, un appartamento **inventato** di 12 × 9 m in metri: **non sono una prova su file reali**.
+32 test (22 del prototipo e 10 dei ritocchi), tutti superati il 31/10/2026 (Python 3.13, ezdxf 1.4.2). Usano `esempi/esempio_artificiale.dxf`, un appartamento **inventato** di 12 × 9 m in metri: **non sono una prova su file reali**.
 
 | Test | Cosa verifica |
 |---|---|
@@ -109,6 +109,20 @@ Andrea sulla seconda versione:
 - le quote corte (30, 34, 60–10 cm) hanno i testi accavallati;
 - sul muro inclinato si quota la proiezione orizzontale e verticale, non la lunghezza vera del muro;
 - il lato sinistro quota solo il corpo edificato, perché il garage non ha muri sul layer quotato.
+
+## Stili di quota conservati (31/10/2026)
+
+**Errore trovato provando l'aggiunta di quote:**
+- salvando un DXF, ezdxf scriveva negli stili di quota tutti i valori che AutoCAD aveva omesso, ma con i suoi predefiniti ISO: virgola, zeri tolti, testo sopra la linea;
+- succedeva anche senza alcuna modifica, quindi lo stile `50` dello studio cambiava;
+- le quote già disegnate restavano giuste, perché AutoCAD mostra la grafica salvata, ma una quota rigenerata o nuova usciva "3,2" invece di "3.20".
+
+**Correzione:**
+- `profilo.fissa_stili` scrive i predefiniti di AutoCAD prima di ogni salvataggio;
+- la tabella è verificata sullo stile `50`: tutti i valori omessi da AutoCAD coincidono;
+- test `test_stili_di_quota_dello_studio_non_cambiano`.
+
+Il file di prova `REF.OPCION 2 - quotato.dxf` è stato rigenerato.
 
 ## Motore nel browser (Pyodide)
 

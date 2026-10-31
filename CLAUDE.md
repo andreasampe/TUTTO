@@ -40,7 +40,7 @@ Indicazioni sue, dal documento master:
   - non dichiarare completato ciò che non è testato su file reali.
 - **Stato (30/10/2026):**
   - Fase 0 fatta (`cad/ANALISI_TECNICA.md`);
-  - Fase 1, prototipo in `cad/domus_cad/` con Python e ezdxf: 22 test (`python -m unittest discover -s tests`) e **prova su una pianta reale** (`REF.OPCION 2`, progetto spagnolo Vivienda Moya; DWG e DXF di Andrea sono sul ramo `main`). Risultato in `cad/prove/`;
+  - Fase 1, prototipo in `cad/domus_cad/` con Python e ezdxf: 32 test (`python -m unittest discover -s tests`) e **prova su una pianta reale** (`REF.OPCION 2`, progetto spagnolo Vivienda Moya; DWG e DXF di Andrea sono sul ramo `main`). Risultato in `cad/prove/`;
   - la prima versione si apre in AutoCAD, ma ad Andrea le quote non andavano bene. Le vuole come il layer `01Cotas 1` del file `03_BASICO`: in metri, con pallino, e anche **dentro le stanze**;
   - fatta la seconda versione (`domus_cad/interne.py`: luci nette da muro a muro, muri campiti come massa, porte chiuse con una chiusura morfologica);
   - terza versione, su richiesta di Andrea:
@@ -70,7 +70,7 @@ Indicazioni sue, dal documento master:
   - Prova di fattibilità `cad/web/prova_browser.html` **riuscita** sul Mac di Andrea: Chrome, 6,4 s, stesso risultato della riga di comando. Il motore gira nel browser. Piano in `cad/ROADMAP.md`.
   - **Area costruita** (31/10/2026) nella webapp:
     - menu *Planimetrie*;
-    - editor `#/planimetrie/<id>` con visualizzatore SVG; si trascinano linea e testo delle quote, si eliminano, si correggono testi e cartiglio;
+    - editor `#/planimetrie/<id>` con visualizzatore SVG; si **aggiungono** quote (due punti agganciati, direzione automatica come in AutoCAD), si trascinano linea e testo, si eliminano, si correggono testi e cartiglio;
     - *Quota in automatico*;
     - versioni come documenti del progetto;
     - scheda nel progetto;
@@ -81,7 +81,8 @@ Indicazioni sue, dal documento master:
     - `domus/assets/js/planimetrie.js`;
     - `domus/assets/cad/` (motore.json + ezdxf), da rigenerare con `python cad/web/esporta_per_domus.py` dopo ogni modifica al motore;
     - lato motore `cad/domus_cad/modifica.py` e `webapi.py`.
-  - Da provare in Local sul Mac.
+  - **Attenzione:** ezdxf al salvataggio scriveva i suoi predefiniti ISO negli stili di quota (virgola, zeri tolti), alterando lo stile dello studio. Ora `profilo.fissa_stili` scrive prima i predefiniti di AutoCAD: va chiamato prima di ogni `saveas`.
+  - Andrea sta installando DOMUS in Local (cartella `domus` copiata in `public`).
 - Flusso DWG scelto: AutoCAD *Salva con nome → DXF 2018*, poi elaborazione DOMUS, poi controllo in AutoCAD e salvataggio in DWG. CADCraft (MIT/Apache) è stato analizzato ma oggi è immaturo nel salvataggio: va rivalutato su file reali.
 - Decisioni di Andrea (30/10/2026):
   - **niente database dell'hosting**: dati su file (SQLite/JSON), anche se la specifica direbbe il contrario;

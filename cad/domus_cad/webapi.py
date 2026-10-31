@@ -26,10 +26,13 @@ def leggi(percorso: str) -> str:
     return _json(dati)
 
 
-def ritocca(origine: str, destinazione: str, modifiche_json: str) -> str:
-    """Applica i ritocchi e salva una nuova versione; l'originale resta com'è."""
+def ritocca(origine: str, destinazione: str, modifiche_json: str, profilo_json: str = "") -> str:
+    """Applica i ritocchi e salva una nuova versione; l'originale resta com'è.
+
+    `profilo_json`: profilo dello studio per le quote aggiunte (vuoto = profilo predefinito)."""
     doc = lettura.apri(origine)
-    resoconto = modifica.applica(doc, json.loads(modifiche_json))
+    resoconto = modifica.applica(doc, json.loads(modifiche_json), json.loads(profilo_json) if profilo_json else None)
+    profilo.fissa_stili(doc)  # gli stili di quota restano come li vede AutoCAD
     doc.saveas(destinazione)
     lettura.apri(destinazione)  # deve riaprirsi senza errori
     resoconto["controlli"].append({"nome": "Riapertura", "ok": True, "dettaglio": "il file salvato si riapre senza errori"})

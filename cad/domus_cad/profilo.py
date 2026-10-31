@@ -245,13 +245,44 @@ def applica(doc: Drawing, profilo: dict) -> tuple[str, str, dict]:
 
 
 # Valori che AutoCAD usa quando un attributo manca nella definizione dello stile di quota
-# (nel DXF AutoCAD non scrive i valori predefiniti). ezdxf invece userebbe i predefiniti ISO
-# (virgola decimale, zeri finali soppressi, testo sopra la linea): diversi da ciò che mostra AutoCAD.
+# (nel DXF AutoCAD non scrive i valori predefiniti; sono i predefiniti del suo modello "acad").
+# ezdxf invece userebbe i predefiniti ISO (virgola decimale, zeri finali soppressi, testo sopra
+# la linea), diversi da ciò che mostra AutoCAD. Verificati sullo stile "50" dello studio: tutti i
+# valori che AutoCAD vi ha omesso coincidono con questi.
 PREDEFINITI_AUTOCAD = {
-    "dimtih": 1, "dimtoh": 1, "dimtad": 0, "dimzin": 0, "dimdsep": ord("."), "dimtofl": 0,
-    "dimtmove": 0, "dimjust": 0, "dimtvp": 0, "dimtix": 0, "dimsoxd": 0, "dimlfac": 1.0,
-    "dimtfac": 1.0, "dimtsz": 0.0, "dimlunit": 2, "dimsah": 0, "dimclrd": 0, "dimclre": 0, "dimclrt": 0,
+    # testo e numeri
+    "dimtih": 1, "dimtoh": 1, "dimtad": 0, "dimzin": 0, "dimdsep": ord("."), "dimdec": 4, "dimtdec": 4,
+    "dimlunit": 2, "dimfrac": 0, "dimrnd": 0.0, "dimlfac": 1.0, "dimtfac": 1.0, "dimtvp": 0.0, "dimjust": 0,
+    "dimtxt": 0.18, "dimgap": 0.09, "dimtix": 0, "dimtmove": 0, "dimatfit": 3, "dimupt": 0,
+    "dimtfill": 0, "dimtfillclr": 0, "dimazin": 0, "dimaunit": 0, "dimadec": 0, "dimtzin": 0,
+    # linee, frecce, colori
+    "dimasz": 0.18, "dimexo": 0.0625, "dimexe": 0.18, "dimdli": 0.38, "dimdle": 0.0, "dimcen": 0.09,
+    "dimtsz": 0.0, "dimtofl": 0, "dimsoxd": 0, "dimsah": 0, "dimse1": 0, "dimse2": 0, "dimsd1": 0, "dimsd2": 0,
+    "dimclrd": 0, "dimclre": 0, "dimclrt": 0, "dimlwd": -2, "dimlwe": -2, "dimfxl": 1.0, "dimfxlon": 0,
+    "dimscale": 1.0,
+    # tolleranze e unità alternative
+    "dimtol": 0, "dimlim": 0, "dimtp": 0.0, "dimtm": 0.0, "dimtolj": 1, "dimalt": 0, "dimaltd": 2,
+    "dimaltf": 25.4, "dimaltrnd": 0.0, "dimaltu": 2, "dimalttd": 2, "dimaltz": 0, "dimalttz": 0,
 }
+
+
+def fissa_stili(doc: Drawing) -> int:
+    """Scrive negli stili di quota i valori che AutoCAD usa quando mancano; da chiamare prima di salvare.
+
+    AutoCAD nel DXF omette i valori predefiniti. Al salvataggio ezdxf li scriverebbe con i SUOI
+    predefiniti (ISO: virgola decimale, zeri finali tolti, testo sopra la linea), cambiando gli stili
+    dello studio. Restituisce quanti valori ha aggiunto."""
+    aggiunti = 0
+    for ds in doc.dimstyles:
+        for k, v in PREDEFINITI_AUTOCAD.items():
+            if not ds.dxf.hasattr(k):
+                try:
+                    ds.dxf.set(k, v)
+                    aggiunti += 1
+                except Exception:  # attributo non previsto da questa versione DXF
+                    continue
+    return aggiunti
+
 
 
 def valori_resa(ds) -> dict:

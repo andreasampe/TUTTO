@@ -1,5 +1,5 @@
 // DOMUS — area "Planimetrie": tutte le planimetrie esecutive dello studio (DXF), con ritocchi nel browser.
-// Si vede la pianta, si spostano o eliminano le quote, si spostano i loro testi, si correggono testi e
+// Si vede la pianta, si aggiungono, spostano o eliminano le quote, si spostano i loro testi, si correggono testi e
 // cartiglio, si salva una nuova versione. Il lavoro sul disegno lo fa il motore DOMUS CAD (assets/js/cad.js),
 // che non tocca il resto del file e controlla il risultato prima di salvarlo.
 'use strict';
@@ -141,13 +141,18 @@
     let byte = null;        // file DXF della versione aperta
     let modello = null;     // disegno letto dal motore
     let selezione = null;   // { tipo: 'quota' | 'testo', h }
+    let aggiunta = null;    // quota nuova in costruzione: { p1, p2, c } (punti scelti e cursore)
+    let orientamento = 'auto';
+    let nuove = 0;
+    let punti = [];         // vertici del disegno a cui si aggancia il cursore
     const modifiche = new Map(); // chiave "handle|tipo" → modifica per domus_cad/modifica.py
     const ordine = [];           // per "Annulla l'ultima"
 
     // --- struttura della pagina ---
     const svg = s('svg', { class: 'plan-svg', role: 'img', 'aria-label': 'Planimetria' });
     const strati = { geo: s('g', { class: 'g-geo' }), testi: s('g', { class: 'g-testi' }), quote: s('g', { class: 'g-quote' }) };
-    const radice = s('g', { transform: 'scale(1,-1)' }, strati.geo, strati.testi, strati.quote);
+    strati.nuove = s('g', { class: 'g-nuove' });
+    const radice = s('g', { transform: 'scale(1,-1)' }, strati.geo, strati.testi, strati.quote, strati.nuove);
     svg.append(radice);
     const avviso = h('div', { class: 'plan-overlay' }, h('div', { class: 'spinner' }), h('div', { class: 'plan-overlay-text' }, 'Avvio del motore CAD…'));
     const tela = h('div', { class: 'plan-canvas' }, svg, avviso,
@@ -190,6 +195,10 @@
       if (!modello) return;
       const g = ev.target.closest('[data-h]');
       svg.setPointerCapture(ev.pointerId);
+      if (aggiunta) { // si può sempre spostare la vista; un clic senza trascinare sceglie il punto
+        trascina = { tipo: 'vista', da: [ev.clientX, ev.clientY], vista: { ...vista }, clic: true };
+        return;
+      }
       if (g && g.dataset.k === 'quota') {
         const q = quota(g.dataset.h);
         seleziona({ tipo: 'quota', h: q.h });
@@ -204,6 +213,11 @@
       }
     });
     svg.addEventListener('pointermove', (ev) => {
+      if (aggiunta && !(trascina && Math.hypot(ev.clientX - trascina.da[0], ev.clientY - trascina.da[1]) > 4)) {
+        aggiunta.c = aggiunta.p2 ? puntoDisegno(ev) : aggancia(puntoDisegno(ev));
+        disegnaNuove();
+        return;
+      }
       if (!trascina) return;
       if (trascina.tipo === 'vista') {
         const k = vista.w / svg.clientWidth;
@@ -225,9 +239,10 @@
       trascina.mosso = Math.hypot(d[0], d[1]) > vista.w / 400;
       disegnaQuota(q);
     });
-    svg.addEventListener('pointerup', () => {
+    svg.addEventListener('pointerup', (ev) => {
       const t = trascina;
       trascina = null;
+      if (aggiunta && t?.clic && Math.hypot(ev.clientX - t.da[0], ev.clientY - t.da[1]) <= 4) { clicAggiunta(ev); return; }
       if (!t || t.tipo === 'vista' || !t.tipo) return;
       const a = anteprima.get(t.h);
       anteprima.delete(t.h);
@@ -238,6 +253,85 @@
       ridisegnaQuote();
       disegnaPannello();
     });
+
+    // --- quote nuove: due punti agganciati al disegno, poi la posizione della linea ---
+    const fattoreMetri = () => ({ m: 1, cm: 0.01, mm: 0.001 })[modello?.unita] ?? 1;
+    function aggancia(p) {
+      const raggio = 12 * vista.w / svg.clientWidth;
+      let migliore = null, d0 = raggio;
+      for (const q of punti) {
+        const d = Math.abs(q[0] - p[0]) + Math.abs(q[1] - p[1]);
+        if (d < d0) { d0 = d; migliore = q; }
+      }
+      return migliore ? { p: migliore, agganciato: true } : { p, agganciato: false };
+    }
+    // Direzione della quota nuova: come in AutoCAD, orizzontale se il cursore è sopra o sotto i due punti,
+    // verticale se è di lato; oppure quella scelta.
+    function angoloNuova(p1, p2, c) {
+      if (orientamento === 'orizzontale') return 0;
+      if (orientamento === 'verticale') return 90;
+      if (orientamento === 'allineata') return Math.atan2(p2[1] - p1[1], p2[0] - p1[0]) * 180 / Math.PI;
+      const fuoriX = Math.max(Math.min(p1[0], p2[0]) - c[0], c[0] - Math.max(p1[0], p2[0]), 0);
+      const fuoriY = Math.max(Math.min(p1[1], p2[1]) - c[1], c[1] - Math.max(p1[1], p2[1]), 0);
+      if (Math.abs(p2[0] - p1[0]) < 1e-9) return 90;
+      if (Math.abs(p2[1] - p1[1]) < 1e-9) return 0;
+      return fuoriX > fuoriY ? 90 : 0;
+    }
+    function quotaNuova(p1, p2, base, angolo) {
+      const a = angolo * Math.PI / 180, u = [Math.cos(a), Math.sin(a)];
+      const t = (p) => (p[0] - base[0]) * u[0] + (p[1] - base[1]) * u[1];
+      const e1 = [base[0] + u[0] * t(p1), base[1] + u[1] * t(p1)], e2 = [base[0] + u[0] * t(p2), base[1] + u[1] * t(p2)];
+      return { e1, e2, misura: Math.abs(t(p2) - t(p1)) };
+    }
+    function disegnaQuotaNuova(p1, p2, base, angolo, cls) {
+      const { e1, e2, misura } = quotaNuova(p1, p2, base, angolo);
+      const ht = altezzaTesto, mezzo = [(e1[0] + e2[0]) / 2, (e1[1] + e2[1]) / 2];
+      const rot = ((angolo % 180) + 180) % 180 > 90 ? angolo + 180 : angolo;
+      return s('g', { class: `q ${cls}` },
+        s('line', { class: 'q-aiuto', x1: p1[0], y1: p1[1], x2: e1[0], y2: e1[1] }),
+        s('line', { class: 'q-aiuto', x1: p2[0], y1: p2[1], x2: e2[0], y2: e2[1] }),
+        s('line', { class: 'q-linea', x1: e1[0], y1: e1[1], x2: e2[0], y2: e2[1] }),
+        s('circle', { class: 'q-punto', cx: e1[0], cy: e1[1], r: ht * 0.35 }),
+        s('circle', { class: 'q-punto', cx: e2[0], cy: e2[1], r: ht * 0.35 }),
+        testoSvg(mezzo[0], mezzo[1], (misura * fattoreMetri()).toFixed(2), ht, rot, 'q-testo', { 'text-anchor': 'middle', 'dominant-baseline': 'middle', 'stroke-width': ht * 0.45 }));
+    }
+    function disegnaNuove() {
+      const figli = [];
+      for (const [k, m] of modifiche) if (k.endsWith('|aggiungi')) figli.push(disegnaQuotaNuova(m.p1, m.p2, m.base, m.angolo, 'mod'));
+      if (aggiunta?.c) {
+        const r = 6 * vista.w / svg.clientWidth;
+        for (const p of [aggiunta.p1, aggiunta.p2].filter(Boolean)) figli.push(s('circle', { class: 'q-scelto', cx: p[0], cy: p[1], r }));
+        if (!aggiunta.p2) {
+          const c = aggiunta.c;
+          figli.push(s('circle', { class: c.agganciato ? 'q-aggancio' : 'q-cursore', cx: c.p[0], cy: c.p[1], r }));
+          if (aggiunta.p1) figli.push(s('line', { class: 'q-aiuto', x1: aggiunta.p1[0], y1: aggiunta.p1[1], x2: c.p[0], y2: c.p[1] }));
+        } else {
+          figli.push(disegnaQuotaNuova(aggiunta.p1, aggiunta.p2, aggiunta.c, angoloNuova(aggiunta.p1, aggiunta.p2, aggiunta.c), 'sel'));
+        }
+      }
+      strati.nuove.replaceChildren(...figli);
+    }
+    function clicAggiunta(ev) {
+      if (!aggiunta.p1) { aggiunta.p1 = aggancia(puntoDisegno(ev)).p; disegnaNuove(); disegnaPannello(); return; }
+      if (!aggiunta.p2) {
+        const p2 = aggancia(puntoDisegno(ev)).p;
+        if (Math.hypot(p2[0] - aggiunta.p1[0], p2[1] - aggiunta.p1[1]) < 1e-9) return;
+        aggiunta.p2 = p2; aggiunta.c = puntoDisegno(ev); disegnaNuove(); disegnaPannello(); return;
+      }
+      const base = puntoDisegno(ev);
+      const angolo = angoloNuova(aggiunta.p1, aggiunta.p2, base);
+      const { misura } = quotaNuova(aggiunta.p1, aggiunta.p2, base, angolo);
+      if (misura < 1e-9) { D.toast('I due punti coincidono in questa direzione: sposta il cursore o cambia orientamento', true); return; }
+      nuove += 1;
+      registra(`nuova${nuove}|aggiungi`, { azione: 'aggiungi', p1: aggiunta.p1, p2: aggiunta.p2, base, angolo }, `Quota aggiunta (${(misura * fattoreMetri()).toFixed(2)})`);
+      aggiunta = { c: null }; // pronta per un'altra quota
+      disegnaNuove(); disegnaPannello();
+    }
+    function iniziaAggiunta() { seleziona(null); aggiunta = { c: null }; svg.classList.add('aggiunta'); disegnaPannello(); }
+    function fineAggiunta() { aggiunta = null; svg.classList.remove('aggiunta'); disegnaNuove(); disegnaPannello(); }
+    const conEsc = (ev) => { if (ev.key === 'Escape' && aggiunta) fineAggiunta(); };
+    document.addEventListener('keydown', conEsc);
+    window.addEventListener('hashchange', () => document.removeEventListener('keydown', conEsc), { once: true });
 
     // --- geometria delle quote ---
     const anteprima = new Map(); // posizioni durante il trascinamento
@@ -323,6 +417,7 @@
       }));
       strati.quote.replaceChildren();
       ridisegnaQuote();
+      disegnaNuove();
     }
 
     // --- modifiche in sospeso ---
@@ -398,10 +493,22 @@
             registra(`${t.h}|valore`, { h: t.h, valore: area.value }, 'Testo modificato');
             disegnaTutto(); disegnaPannello();
           } }, 'Applica'))));
+      } else if (aggiunta) {
+        const passo = !aggiunta.p1 ? 'Clicca il primo punto: il cursore si aggancia agli spigoli del disegno.'
+          : !aggiunta.p2 ? 'Clicca il secondo punto.'
+            : 'Muovi il mouse per scegliere dove mettere la linea e clicca.';
+        parti.push(h('section', { class: 'plan-box' },
+          h('div', { class: 'eyebrow' }, 'Nuova quota'),
+          h('p', { class: 'small', style: 'margin:0' }, passo),
+          h('div', { class: 'tabs' }, [['auto', 'Automatica'], ['orizzontale', 'Orizzontale'], ['verticale', 'Verticale'], ['allineata', 'Allineata']].map(([k, l]) =>
+            h('button', { type: 'button', class: orientamento === k ? 'on' : '', onclick: () => { orientamento = k; disegnaNuove(); disegnaPannello(); } }, l))),
+          h('div', { class: 'plan-actions' }, h('button', { class: 'btn small', onclick: fineAggiunta }, 'Fine'),
+            h('span', { class: 'muted small' }, 'Esc per finire · trascina per muovere la vista'))));
       } else {
         parti.push(h('section', { class: 'plan-box muted small' }, modello
           ? 'Clicca una quota per spostarla, spostarne il testo o eliminarla; clicca un testo per correggerlo. Trascina lo sfondo per muoverti, rotella per lo zoom.'
-          : 'Il disegno si sta caricando.'));
+          : 'Il disegno si sta caricando.',
+        modello ? h('div', { class: 'plan-actions' }, h('button', { class: 'btn small primary', onclick: iniziaAggiunta }, D.icon('plus', 14), 'Aggiungi quota')) : null));
       }
 
       // modifiche e salvataggio
@@ -480,6 +587,9 @@
           const [e1, e2] = estremi(q, q.base);
           q.ptLibero = Math.hypot(q.pt[0] - (e1[0] + e2[0]) / 2, q.pt[1] - (e1[1] + e2[1]) / 2) > (q.ht || 0.1) * 0.6;
         }
+        punti = [];
+        for (const el of modello.geometria) for (const q of el.p) punti.push(q);
+        for (const q of modello.quote) if (q.p1) punti.push(q.p1, q.p2);
         disegnaTutto();
         adatta();
         messaggio('');
@@ -505,7 +615,8 @@
       const lista = elencoModifiche();
       await D.run(btn, async () => {
         messaggio('Applico le modifiche al disegno…');
-        const { byte: nuovo, resoconto } = await D.cad.ritocca(byte, lista);
+        const profilo = lista.some((m) => m.azione === 'aggiungi') ? (await D.get('settings')).cad_profile || '' : '';
+        const { byte: nuovo, resoconto } = await D.cad.ritocca(byte, lista, profilo);
         messaggio('');
         if (!resoconto.superato && !D.confirm(`Alcuni controlli non sono superati:\n${resoconto.controlli.filter((c) => !c.ok).map((c) => `• ${c.nome}: ${c.dettaglio}`).join('\n')}\n\nSalvare comunque la nuova versione?`)) return;
         const riepilogo = Object.entries(resoconto.riepilogo).map(([k, n]) => `${n} ${ETICHETTE[k] || k}`).join(', ');
@@ -540,7 +651,7 @@
       const chiudi = D.modal('Modifica planimetria', form);
     }
 
-    const ETICHETTE = { elimina: 'quote eliminate', sposta_linea: 'linee spostate', sposta_testo: 'testi spostati', testo_al_centro: 'testi al centro', testo: 'testi modificati', attributi: 'cartigli aggiornati' };
+    const ETICHETTE = { aggiungi: 'quote aggiunte', elimina: 'quote eliminate', sposta_linea: 'linee spostate', sposta_testo: 'testi spostati', testo_al_centro: 'testi al centro', testo: 'testi modificati', attributi: 'cartigli aggiornati' };
 
     window.addEventListener('beforeunload', (e) => { if (elencoModifiche().length) e.preventDefault(); });
     disegnaPannello();

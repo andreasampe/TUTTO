@@ -6,7 +6,8 @@ Vale per QUALUNQUE planimetria esecutiva in DXF, non solo per quelle prodotte da
   - testi;
   - quote modificabili;
   - cartigli (blocchi con attributi);
-- `applica(doc, modifiche)` applica i ritocchi scelti nel browser:
+- `applica(doc, modifiche, profilo)` applica i ritocchi scelti nel browser:
+  - aggiungere una quota tra due punti, sul layer e con lo stile dello studio;
   - eliminare una quota o un testo;
   - spostare la linea di quota (la misura non cambia: cambia solo dove è disegnata);
   - spostare il testo della quota, o rimetterlo al centro;
@@ -21,7 +22,8 @@ import math
 from ezdxf import disassemble
 from ezdxf.document import Drawing
 
-from .profilo import _override, valori_resa
+from . import profilo as profili
+from .profilo import _override, aggiungi_quota, valori_resa
 
 TIPI_QUOTA = {0: "lineare", 1: "allineata"}  # tipi che si possono spostare; gli altri solo eliminare
 
@@ -155,15 +157,37 @@ def ridisegna(doc: Drawing, dim, testo_in=None, testo_al_centro: bool = False) -
         doc.blocks.delete_block(vecchio, safe=False)
 
 
-def applica(doc: Drawing, modifiche: list[dict]) -> dict:
-    """Applica i ritocchi; restituisce il resoconto con i controlli."""
+def applica(doc: Drawing, modifiche: list[dict], profilo: dict | None = None) -> dict:
+    """Applica i ritocchi; restituisce il resoconto con i controlli.
+
+    `profilo`: profilo dello studio per le quote aggiunte (layer, stile); se manca, quello predefinito."""
     msp = doc.modelspace()
     prima = {e.dxf.handle for e in msp}
     toccati: set[str] = set()
     misure: dict[str, float] = {}
+    aggiunte: dict[str, float] = {}  # handle della quota nuova → misura attesa
     fatte, errori = [], []
+    stile_studio = None
     for m in modifiche:
         h, azione = str(m.get("h", "")), m.get("azione")
+        if azione == "aggiungi":
+            try:
+                if stile_studio is None:
+                    stile_studio = profili.applica(doc, profilo or profili.carica())
+                layer, stile, override = stile_studio
+                p1, p2, base, angolo = m["p1"], m["p2"], m["base"], float(m["angolo"])
+                u = (math.cos(math.radians(angolo)), math.sin(math.radians(angolo)))
+                attesa = abs((p2[0] - p1[0]) * u[0] + (p2[1] - p1[1]) * u[1])
+                if attesa < 1e-9:
+                    raise ValueError("i due punti coincidono nella direzione della quota")
+                if angolo > 90.5 or angolo <= -89.5:  # testo leggibile: da sinistra a destra o dal basso in alto
+                    angolo = angolo - 180 if angolo > 90.5 else angolo + 180
+                nuova = aggiungi_quota(doc, tuple(base), tuple(p1), tuple(p2), angolo, layer, stile, dict(override))
+                aggiunte[nuova] = attesa
+                fatte.append(azione)
+            except Exception as err:
+                errori.append(f"quota nuova: {err}")
+            continue
         e = doc.entitydb.get(h)
         if e is None or not e.is_alive:
             errori.append(f"{h}: entità non trovata")
@@ -209,9 +233,10 @@ def applica(doc: Drawing, modifiche: list[dict]) -> dict:
     eliminati = {m["h"] for m in modifiche if m.get("azione") == "elimina"}
     persi = sorted((prima - dopo) - eliminati)
     variate = [h for h, v in misure.items() if (e := doc.entitydb.get(h)) is not None and abs(e.get_measurement() - v) > 1e-9]
+    variate += [h for h, v in aggiunte.items() if (e := doc.entitydb.get(h)) is None or abs(e.get_measurement() - v) > 1e-9]
     controlli = [
         {"nome": "Conservazione", "ok": not persi, "dettaglio": "nessuna entità persa oltre a quelle eliminate" if not persi else f"perse: {persi[:5]}"},
-        {"nome": "Misure", "ok": not variate, "dettaglio": "le quote spostate misurano come prima" if not variate else f"misure cambiate: {variate[:5]}"},
+        {"nome": "Misure", "ok": not variate, "dettaglio": "le quote spostate misurano come prima, le nuove misurano la distanza tra i punti scelti" if not variate else f"misure cambiate: {variate[:5]}"},
         {"nome": "Modifiche", "ok": not errori, "dettaglio": f"{len(fatte)} applicate" + (f", {len(errori)} non riuscite: {errori[:3]}" if errori else "")},
     ]
     riepilogo = {a: fatte.count(a) for a in sorted(set(fatte))}

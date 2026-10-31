@@ -170,6 +170,7 @@ def elabora(origine: str, uscita: str, *, unita: str | None = None, scala: int |
 
     # 11. esportazione (stessa versione DXF dell'originale)
     elaborato = lavoro / "elaborato.dxf"
+    profili.fissa_stili(doc)  # gli stili di quota restano come li vede AutoCAD
     doc.saveas(elaborato)
     log.append(f"Salvato {elaborato.name} ({elaborato.stat().st_size} byte)")
 

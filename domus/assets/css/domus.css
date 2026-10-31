@@ -583,6 +583,12 @@ a.hbar-label:hover { color: #fff; }
 .plan-svg .q:hover .q-linea { stroke: var(--ink); }
 .plan-svg .q.sel .q-linea { stroke: var(--amber); stroke-width: 2; }
 .plan-svg .q.sel .q-punto, .plan-svg .q.sel .q-testo { fill: var(--amber); }
+.plan-svg.aggiunta { cursor: crosshair; }
+.plan-svg .g-nuove { pointer-events: none; }
+.plan-svg .q-aiuto { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 4 4; vector-effect: non-scaling-stroke; }
+.plan-svg .q-aggancio { fill: none; stroke: var(--green); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.plan-svg .q-cursore { fill: none; stroke: var(--ink-3); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.plan-svg .q-scelto { fill: var(--amber); }
 .plan-overlay { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 14px; background: rgba(10, 10, 10, .72); color: var(--ink-2); font-size: 13px; text-align: center; padding: 20px; }
 .plan-overlay[hidden] { display: none; }
 .spinner { width: 28px; height: 28px; border: 1.5px solid var(--line-3); border-top-color: var(--ink); border-radius: 50%; animation: gira 1s linear infinite; }
