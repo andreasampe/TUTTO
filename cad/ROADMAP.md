@@ -88,3 +88,14 @@ Provato qui con la webapp vera (PHP, database, interfaccia) e il motore Python e
 
 CADCraft (CAD completo nel browser) resta da rivalutare se un giorno servirà modificare il disegno vero. Oggi perde dati al salvataggio (vedi ANALISI_TECNICA.md).
 
+### Da fare nell'editor delle planimetrie (richieste di Andrea, 31/10/2026)
+
+1. **Quote nuove modificabili ed eliminabili.**
+   - Oggi una quota appena aggiunta, prima del salvataggio, non si può selezionare, spostare né eliminare.
+   - Si può solo annullare dalla lista "modifiche da salvare".
+   - Deve comportarsi come le altre quote: selezione, trascinamento di linea e testo, "Elimina quota".
+2. **Menu col tasto destro sulla pianta**, con i comandi pertinenti al punto cliccato:
+   - su una quota: Elimina quota, Testo al centro, Annulla modifiche di questa quota;
+   - su un testo: Modifica testo;
+   - su un punto vuoto: Aggiungi quota da qui, Tutto il disegno.
+
