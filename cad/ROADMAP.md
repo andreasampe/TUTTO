@@ -95,4 +95,9 @@ CADCraft (CAD completo nel browser) resta da rivalutare se un giorno servirà mo
    - su una quota: Elimina, Ripristina, Testo al centro, Annulla le sue modifiche;
    - su un testo: Modifica testo;
    - sul vuoto: Aggiungi quota da qui, Tutto il disegno, Annulla l'ultima modifica.
+4. **Snap come in AutoCAD** per scegliere i punti:
+   - Fine (quadrato);
+   - Punto medio (triangolo);
+   - Perpendicolare (⊥);
+   - Vicino (clessidra).
 3. Quote nuove **allineate** in automatico quando i due punti sono in obliquo (muro inclinato) e la linea va accanto al tratto.

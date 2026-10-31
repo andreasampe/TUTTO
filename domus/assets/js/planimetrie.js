@@ -145,6 +145,7 @@
     let orientamento = 'auto';
     let nuove = 0;
     let punti = [];         // vertici del disegno a cui si aggancia il cursore
+    let segmenti = [];      // linee del disegno: punto medio, perpendicolare, vicino
     const modifiche = new Map(); // chiave "handle|tipo" → modifica per domus_cad/modifica.py
     const ordine = [];           // per "Annulla l'ultima"
 
@@ -262,14 +263,52 @@
 
     // --- quote nuove: due punti agganciati al disegno, poi la posizione della linea ---
     const fattoreMetri = () => ({ m: 1, cm: 0.01, mm: 0.001 })[modello?.unita] ?? 1;
+    // Snap come in AutoCAD, in ordine di priorità: fine (spigoli e estremi delle linee), punto medio,
+    // perpendicolare dal primo punto, vicino (un punto qualsiasi sulla linea).
+    const SNAP = { fine: 'Fine', medio: 'Punto medio', perpendicolare: 'Perpendicolare', vicino: 'Vicino' };
     function aggancia(p) {
       const raggio = 12 * vista.w / svg.clientWidth;
+      const vicinoA = (q, r) => Math.hypot(q[0] - p[0], q[1] - p[1]) < r;
       let migliore = null, d0 = raggio;
       for (const q of punti) {
-        const d = Math.abs(q[0] - p[0]) + Math.abs(q[1] - p[1]);
+        const d = Math.hypot(q[0] - p[0], q[1] - p[1]);
         if (d < d0) { d0 = d; migliore = q; }
       }
-      return migliore ? { p: migliore, agganciato: true } : { p, agganciato: false };
+      if (migliore) return { p: migliore, agganciato: true, tipo: 'fine' };
+      let medio = null, perp = null, vic = null, dm = raggio, dp = raggio, dv = raggio * 0.8;
+      const p1 = aggiunta?.p1;
+      for (const [x1, y1, x2, y2] of segmenti) {
+        const dx = x2 - x1, dy = y2 - y1, L2 = dx * dx + dy * dy;
+        if (!L2) continue;
+        const m = [(x1 + x2) / 2, (y1 + y2) / 2];
+        const d = Math.hypot(m[0] - p[0], m[1] - p[1]);
+        if (d < dm) { dm = d; medio = m; }
+        if (p1) { // piede della perpendicolare dal primo punto
+          const t = ((p1[0] - x1) * dx + (p1[1] - y1) * dy) / L2;
+          if (t > 0 && t < 1) { const f = [x1 + t * dx, y1 + t * dy]; const df = Math.hypot(f[0] - p[0], f[1] - p[1]); if (df < dp && Math.hypot(f[0] - p1[0], f[1] - p1[1]) > 1e-9) { dp = df; perp = f; } }
+        }
+        const t = Math.max(0, Math.min(1, ((p[0] - x1) * dx + (p[1] - y1) * dy) / L2));
+        const n = [x1 + t * dx, y1 + t * dy];
+        const dn = Math.hypot(n[0] - p[0], n[1] - p[1]);
+        if (dn < dv) { dv = dn; vic = n; }
+      }
+      if (medio && vicinoA(medio, raggio)) return { p: medio, agganciato: true, tipo: 'medio' };
+      if (perp) return { p: perp, agganciato: true, tipo: 'perpendicolare' };
+      if (vic) return { p: vic, agganciato: true, tipo: 'vicino' };
+      return { p, agganciato: false };
+    }
+    // Simbolo dello snap, sempre della stessa grandezza sullo schermo.
+    function simboloSnap(c) {
+      const k = vista.w / svg.clientWidth, a = 6 * k, [x, y] = c.p;
+      const forma = {
+        fine: `M${x - a} ${y - a}H${x + a}V${y + a}H${x - a}Z`,
+        medio: `M${x - a} ${y - a}H${x + a}L${x} ${y + a}Z`,
+        perpendicolare: `M${x - a} ${y - a}H${x + a}M${x} ${y - a}V${y + a}M${x - a} ${y}H${x}V${y - a}`,
+        vicino: `M${x - a} ${y - a}H${x + a}L${x - a} ${y + a}H${x + a}Z`,
+      }[c.tipo];
+      if (!forma) return [s('circle', { class: 'q-cursore', cx: x, cy: y, r: 6 * k })];
+      return [s('path', { class: 'q-snap', d: forma }),
+        testoSvg(x + 10 * k, y - 12 * k, SNAP[c.tipo], 11 * k, 0, 'q-snap-nome', { 'stroke-width': 3 * k })];
     }
     // Direzione della quota nuova: come in AutoCAD, orizzontale se il cursore è sopra o sotto i due punti,
     // verticale se è di lato; oppure quella scelta.
@@ -317,7 +356,7 @@
         for (const p of [aggiunta.p1, aggiunta.p2].filter(Boolean)) figli.push(s('circle', { class: 'q-scelto', cx: p[0], cy: p[1], r }));
         if (!aggiunta.p2) {
           const c = aggiunta.c;
-          figli.push(s('circle', { class: c.agganciato ? 'q-aggancio' : 'q-cursore', cx: c.p[0], cy: c.p[1], r }));
+          figli.push(...simboloSnap(c));
           if (aggiunta.p1) figli.push(s('line', { class: 'q-aiuto', x1: aggiunta.p1[0], y1: aggiunta.p1[1], x2: c.p[0], y2: c.p[1] }));
         } else {
           figli.push(disegnaQuotaNuova(aggiunta.p1, aggiunta.p2, aggiunta.c, angoloNuova(aggiunta.p1, aggiunta.p2, aggiunta.c), 'sel'));
@@ -669,8 +708,12 @@
           const [e1, e2] = estremi(q, q.base);
           q.ptLibero = Math.hypot(q.pt[0] - (e1[0] + e2[0]) / 2, q.pt[1] - (e1[1] + e2[1]) / 2) > (q.ht || 0.1) * 0.6;
         }
-        punti = [];
-        for (const el of modello.geometria) for (const q of el.p) punti.push(q);
+        punti = []; segmenti = [];
+        for (const el of modello.geometria) {
+          for (const q of el.p) punti.push(q);
+          for (let i = 1; i < el.p.length; i++) segmenti.push([...el.p[i - 1], ...el.p[i]]);
+          if (el.f && el.p.length > 2) segmenti.push([...el.p[el.p.length - 1], ...el.p[0]]);
+        }
         for (const q of modello.quote) if (q.p1) punti.push(q.p1, q.p2);
         disegnaTutto();
         adatta();

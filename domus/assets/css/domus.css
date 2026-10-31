@@ -589,6 +589,8 @@ a.hbar-label:hover { color: #fff; }
 .plan-svg .q-aggancio { fill: none; stroke: var(--green); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
 .plan-svg .q-cursore { fill: none; stroke: var(--ink-3); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .plan-svg .q-scelto { fill: var(--amber); }
+.plan-svg .q-snap { fill: none; stroke: var(--green); stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+.plan-svg .q-snap-nome { fill: var(--green); font-family: var(--font); paint-order: stroke; stroke: #0c0c0c; }
 .plan-menu { position: absolute; z-index: 5; min-width: 220px; background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 10px; box-shadow: var(--shadow); padding: 6px; display: grid; }
 .plan-menu[hidden] { display: none; }
 .plan-menu-title { font-size: 10.5px; letter-spacing: .22em; text-transform: uppercase; color: var(--ink-3); padding: 6px 10px 8px; }
