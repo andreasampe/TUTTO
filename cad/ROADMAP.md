@@ -101,3 +101,29 @@ CADCraft (CAD completo nel browser) resta da rivalutare se un giorno servirà mo
    - Perpendicolare (⊥);
    - Vicino (clessidra).
 3. Quote nuove **allineate** in automatico quando i due punti sono in obliquo (muro inclinato) e la linea va accanto al tratto.
+
+## Tutte le tavole esecutive del file di riferimento (richiesta di Andrea, 31/10/2026)
+
+Richiesta:
+- generare in automatico tutte le tavole che ci sono nel file di riferimento;
+- renderle modificabili dall'app, con sezioni dedicate;
+- alla fine racchiudere tutto in un'unica planimetria finale, come `03_BASICO`.
+
+Inventario di `03_BASICO_VIVIENDA MOYA OPCION 2-3.dxf`, analizzato il 31/10/2026: una serie per l'opzione 2 e una per l'opzione 3. Ogni tavola è la pianta `REF.OPCION` inserita come riferimento esterno, più i layer della tavola.
+
+| Tavola | Layout | Layer | Contenuto | Automatizzabile senza inventare dati |
+|---|---|---|---|---|
+| Quote | PB_COT | 01Cotas 1, 01Texto 4 - Carpinterías | quote, sigle dei serramenti (P1a, V1, PV1, PG+PA, CV1…) | quote **fatte**; sigle dei serramenti: riconoscimento e numerazione automatica, tipi da confermare |
+| Superfici utili | PB_SUP | 01Sup. útiles, 01Texto 2 - útiles | nome e superficie dei locali | superfici **sì** (locali già riconosciuti dal motore); nomi da confermare nell'app (proposta dagli arredi) |
+| Abitabilità | PB_HABI | 05Habitabilidad | arredi minimi e legenda | serve la norma di riferimento |
+| DB-SUA | PB_SUA | 05DB-SUA | classe di scivolosità C1/C2/C3 per locale | sì, dalla destinazione del locale (regole CTE DB-SUA 1) |
+| DB-SI | PB_SI | 05DB-SI | settori, percorsi di evacuazione, S.E.E.S | percorsi misurabili; uscite da indicare |
+| Muratura | ALB_PB | 02Albañilería | tipi di muro | i tipi sono scelte di progetto: da assegnare nell'app |
+| Finiture | ACAB_PB | 02Acabados | finiture | scelte di progetto: da assegnare nell'app |
+| Idrico e scarichi | FONT_PB, SAN_PB | 03fontanería, 03Saneamiento | tubi, diametri, aerotermia, allaccio | serve la norma e le regole (punto 9 della specifica) |
+| Elettrico e illuminazione | ELECT_PB, ILUM_PB | 03electricidad… | prese, luci, altezze | serve la norma (REBT / CEI 64-8) e le regole |
+| Prospetti e sezioni | ALZ…, SECCION… | — | 4 prospetti, 2 sezioni | servono altezze e dati 3D che la pianta non contiene |
+| Lamina base | 00_LÁMINA BASE, PLANOS | — | impaginazione con cartiglio | sì: layout di stampa con le tavole affiancate e PDF |
+
+Decisioni chieste ad Andrea: norma, priorità, impianti, prospetti e sezioni. Vedi la conversazione del 31/10/2026.
+
