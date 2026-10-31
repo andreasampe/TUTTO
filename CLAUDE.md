@@ -84,6 +84,15 @@ Indicazioni sue, dal documento master:
   - **Attenzione:** ezdxf al salvataggio scriveva i suoi predefiniti ISO negli stili di quota (virgola, zeri tolti), alterando lo stile dello studio. Ora `profilo.fissa_stili` scrive prima i predefiniti di AutoCAD: va chiamato prima di ogni `saveas`.
   - Andrea sta installando DOMUS in Local (cartella `domus` copiata in `public`).
   - Fatto il 31/10/2026: quote appena aggiunte modificabili ed eliminabili, menu col tasto destro, quote allineate in automatico sui tratti inclinati, snap come in AutoCAD (fine, punto medio, perpendicolare, vicino).
+- **Tutte le tavole esecutive (richiesta del 31/10/2026).** Inventario del file di riferimento e decisioni di Andrea in fondo a `cad/ROADMAP.md`.
+  - Normativa italiana, con un archivio dei comuni: regole nazionali più quelle comunali, mai inventate.
+  - Ordine:
+    - superfici utili;
+    - sigle dei serramenti;
+    - tavola finale unica;
+    - poi le altre tavole.
+  - Impianti: proposta automatica con le regole di Andrea, poi ritocchi.
+  - Prospetti e sezioni: con le altezze inserite nell'app.
 - Flusso DWG scelto: AutoCAD *Salva con nome → DXF 2018*, poi elaborazione DOMUS, poi controllo in AutoCAD e salvataggio in DWG. CADCraft (MIT/Apache) è stato analizzato ma oggi è immaturo nel salvataggio: va rivalutato su file reali.
 - Decisioni di Andrea (30/10/2026):
   - **niente database dell'hosting**: dati su file (SQLite/JSON), anche se la specifica direbbe il contrario;

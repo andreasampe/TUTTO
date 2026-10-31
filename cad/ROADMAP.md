@@ -125,5 +125,21 @@ Inventario di `03_BASICO_VIVIENDA MOYA OPCION 2-3.dxf`, analizzato il 31/10/2026
 | Prospetti e sezioni | ALZ…, SECCION… | — | 4 prospetti, 2 sezioni | servono altezze e dati 3D che la pianta non contiene |
 | Lamina base | 00_LÁMINA BASE, PLANOS | — | impaginazione con cartiglio | sì: layout di stampa con le tavole affiancate e PDF |
 
-Decisioni chieste ad Andrea: norma, priorità, impianti, prospetti e sezioni. Vedi la conversazione del 31/10/2026.
+**Decisioni di Andrea (31/10/2026):**
+1. **Normativa italiana**, con regole che cambiano da comune a comune.
+   - Serve un archivio interno dei comuni, che applichi le regole giuste in base al comune del progetto.
+   - Le regole comunali non si possono inventare. Struttura a due livelli:
+     - regole **nazionali** verificabili (DM 5/7/1975 sui requisiti igienico-sanitari, DM 236/89 sull'accessibilità…);
+     - **regole del comune**, inserite dallo studio o importate da fonti ufficiali, sopra quelle nazionali.
+   - Elenco dei comuni dal file aperto ISTAT.
+2. **Ordine:**
+   - superfici utili;
+   - sigle dei serramenti;
+   - tavola finale unica (impaginazione con cartiglio, PDF);
+   - poi le altre tavole.
+3. **Impianti: proposta automatica + ritocchi**, con le regole di Andrea:
+   - camera: 2 prese ai lati del letto, h 60 cm;
+   - cucina: prese di forno, frigo, piano cottura e microonde a h 40 cm, più 2 prese sul piano di lavoro a h 110 cm;
+   - per il resto, buon senso e il riferimento progettuale (tavole ELECT/ILUM/FONT/SAN del file `03_BASICO`).
+4. **Prospetti e sezioni:** con le altezze inserite nell'app (locali, davanzali, architravi, tetto).
 
