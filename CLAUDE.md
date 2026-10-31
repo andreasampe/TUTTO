@@ -7,7 +7,7 @@ Leggi questo file all'inizio di ogni sessione. Contiene chi è l'utente, come vu
 - Si chiama Andrea, scrive in **italiano**: rispondi sempre in italiano.
 - Lavora su **Mac** con **Local** (di WP Engine). I siti stanno in `/Users/andreagiacometti/Local Sites/` (il percorso ha uno spazio: nei comandi va tra virgolette).
 - Cartelle in `Local Sites`: `www.sterzetto.it`, `www.minulaboutique.com`, `www.chiarapucciarch.it` (siti WordPress), `DOMUS` (webapp da costruire da zero) e `_VARIO` (plugin, skill e materiale utile).
-- Il documento di riferimento generale è *Documento_unico_progetti_e_ambiente_digitale.docx*. Nel documento, **TOTUM** = area privata di chiarapucciarch.it.
+- Il documento di riferimento generale è *Documento_unico_progetti_e_ambiente_digitale.docx*, salvato in `appunti/` (anche in `.md`), con `DA_FARE.md` e la specifica CAD. Nel documento, **TOTUM** = area privata di chiarapucciarch.it.
 - Da questa sessione cloud **non si può accedere al suo Mac**: il codice passa da GitHub (questo repository) e lui lo copia in Local.
 
 ### Come vuole essere guidato

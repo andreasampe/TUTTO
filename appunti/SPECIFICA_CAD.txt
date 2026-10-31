@@ -1,0 +1,1340 @@
+PROGETTO: SOFTWARE CAD INTELLIGENTE PER ARCHITETTI
+
+Specifica generale, requisiti tecnici e roadmap di sviluppo
+
+Documento di riferimento per Claude Code
+
+Versione: 1.0
+Obiettivo economico: 0 € di costi aggiuntivi obbligatori
+Strategia tecnologica: utilizzo prioritario di software e librerie open source
+Ambiente di sviluppo: MacBook Pro con Apple Silicon
+Infrastruttura web: dominio, hosting e database già disponibili
+Obiettivo finale: realizzare un software web capace di interpretare planimetrie architettoniche e generare elaborati tecnici CAD realmente utilizzabili.
+
+⸻
+
+1. IL PROGETTO
+
+Vogliamo sviluppare un software per architetti che automatizzi progressivamente la produzione degli elaborati tecnici partendo da una planimetria esistente.
+
+L’utente dovrà poter caricare un disegno architettonico, preferibilmente in formato DWG proveniente da AutoCAD, e ottenere nuovi elaborati tecnici generati automaticamente a partire dalla geometria dell’edificio, dalle informazioni fornite dall’utente e da regole progettuali esplicite.
+
+Il sistema dovrà essere in grado di evolvere nel tempo fino a comprendere funzionalità come:
+
+* Analisi e interpretazione delle planimetrie.
+* Ricostruzione digitale dell’edificio.
+* Riconoscimento e organizzazione dei locali.
+* Generazione di piante quotate.
+* Generazione di elaborati dello stato di fatto.
+* Generazione di elaborati dello stato di progetto.
+* Elaborati delle demolizioni e delle nuove costruzioni.
+* Progettazione assistita degli impianti elettrici.
+* Progettazione assistita degli impianti idrico-sanitari.
+* Elaborati relativi agli scarichi e alla rete fognaria.
+* Generazione di tavole tecniche impaginate.
+* Esportazione di file CAD e PDF.
+* Calcolo delle superfici e delle quantità.
+* Generazione futura di computi metrici e distinte dei materiali.
+
+Questa è la visione complessiva del prodotto.
+
+Non dobbiamo però sviluppare tutte queste funzionalità contemporaneamente.
+
+Dobbiamo costruire un sistema modulare, verificabile e progressivamente espandibile, partendo da un primo risultato concreto: importare una planimetria reale, elaborarla e generare un nuovo disegno CAD corretto.
+
+⸻
+
+2. VINCOLO ASSOLUTO: NON SPENDERE DENARO
+
+Questo è il requisito più importante dell’intero progetto.
+
+2.1 Budget
+
+Il budget aggiuntivo disponibile è pari a zero euro.
+
+Non devono essere introdotti costi obbligatori per:
+
+* Licenze software.
+* Abbonamenti.
+* API a pagamento.
+* Servizi di intelligenza artificiale a consumo.
+* Conversioni CAD a pagamento.
+* Database aggiuntivi.
+* Hosting aggiuntivo.
+* Servizi cloud a pagamento.
+* Software commerciali necessari al funzionamento ordinario.
+* Servizi esterni indispensabili per generare gli elaborati.
+
+Disponiamo già di un sito web, un dominio, un hosting e un database. Dobbiamo sfruttare questa infrastruttura, verificandone le capacità effettive prima di decidere come utilizzarla.
+
+Non acquistare servizi, non attivare abbonamenti e non introdurre dipendenze che richiedano pagamenti.
+
+Se una funzionalità non è realizzabile con gli strumenti disponibili, cercare prima un’alternativa gratuita e open source.
+
+Se non esiste un’alternativa adeguata, documentare il limite e proporre una soluzione che non comporti costi obbligatori, anche se richiede più sviluppo.
+
+2.2 Software open source
+
+Privilegiare:
+
+* Progetti open source già esistenti.
+* Librerie gratuite con licenze compatibili.
+* Motori CAD riutilizzabili.
+* Librerie per leggere e scrivere file DXF.
+* Strumenti gratuiti per la conversione dei formati CAD.
+* Librerie geometriche.
+* Database già disponibili.
+* Framework web open source.
+* Modelli AI eseguibili localmente, quando utili.
+* Algoritmi deterministici sviluppati direttamente da noi.
+
+Non sviluppare da zero una funzionalità già disponibile in un progetto open source valido, mantenuto e compatibile con le esigenze del prodotto.
+
+Prima di adottare un progetto, verificare sempre la licenza e le eventuali restrizioni.
+
+Importante: gratuito non significa necessariamente open source. Dobbiamo verificare entrambi gli aspetti.
+
+Se in futuro il software verrà distribuito o commercializzato, tutte le licenze dovranno essere compatibili con questa possibilità.
+
+⸻
+
+3. INFRASTRUTTURA GIÀ DISPONIBILE
+
+Il progetto dispone già di:
+
+* Dominio.
+* Sito web di appoggio.
+* Hosting.
+* Database.
+
+Non dobbiamo acquistare una nuova infrastruttura per iniziare.
+
+Tuttavia, non bisogna presumere che l’hosting sia in grado di eseguire qualsiasi programma.
+
+Prima di decidere l’architettura definitiva, verificare:
+
+1. Sistema operativo e caratteristiche dell’hosting.
+2. Versioni disponibili di PHP e altri runtime.
+3. Disponibilità di Python o possibilità di installare programmi compatibili.
+4. Possibilità di eseguire programmi esterni.
+5. Possibilità di utilizzare processi in background.
+6. Limiti di memoria e tempo di esecuzione.
+7. Spazio disponibile per i file CAD.
+8. Limiti di upload e download.
+9. Caratteristiche e credenziali di accesso al database, senza esporle nei log o nei documenti.
+10. Possibilità di installare dipendenze open source senza privilegi amministrativi.
+
+Non modificare la configurazione dell’hosting prima di averne verificato le caratteristiche.
+
+Se il server non può eseguire direttamente il motore CAD, valutare un’architettura nella quale il sito gestisca gli utenti, i progetti e i file, mentre le elaborazioni vengano eseguite sul Mac o su un altro ambiente locale gratuito.
+
+Questa soluzione dovrà essere progettata con attenzione alla sicurezza, alla sincronizzazione dei file e alla gestione dei risultati.
+
+Non introdurre servizi cloud a pagamento per risolvere eventuali limiti dell’hosting.
+
+⸻
+
+4. OBIETTIVO TECNICO PRINCIPALE
+
+Il sistema deve trasformare una planimetria architettonica esistente in nuovi elaborati tecnici.
+
+Il punto di partenza principale sarà un file DWG realizzato con AutoCAD.
+
+In futuro potremo valutare altri formati e programmi di provenienza.
+
+Il sistema dovrà distinguere chiaramente quattro operazioni.
+
+A. Lettura del disegno
+
+Il programma deve poter analizzare gli elementi presenti nella planimetria, quando supportati dal formato e dagli strumenti utilizzati.
+
+Informazioni da recuperare, ove disponibili:
+
+* Entità geometriche.
+* Linee.
+* Polilinee.
+* Archi.
+* Cerchi.
+* Testi.
+* Quote.
+* Blocchi.
+* Layer.
+* Unità di misura.
+* Coordinate.
+* Riferimenti esterni.
+* Altre proprietà utili del disegno.
+
+Non bisogna presumere che ogni planimetria sia organizzata correttamente.
+
+Alcuni file potrebbero contenere geometrie disordinate, blocchi complessi, layer non identificabili, elementi sovrapposti o informazioni mancanti.
+
+Il sistema deve rilevare questi problemi e segnalarli.
+
+B. Interpretazione architettonica
+
+La geometria CAD non equivale automaticamente a una comprensione dell’edificio.
+
+Dobbiamo sviluppare un livello software capace di ricostruire progressivamente una rappresentazione strutturata dell’immobile.
+
+Il sistema dovrà arrivare a riconoscere, quando possibile:
+
+* Pareti.
+* Porte.
+* Finestre.
+* Locali.
+* Confini dei locali.
+* Collegamenti tra ambienti.
+* Superfici.
+* Dimensioni.
+* Elementi architettonici.
+* Posizioni utili per gli impianti.
+
+Le informazioni riconosciute automaticamente dovranno essere accompagnate da un livello di affidabilità e, quando necessario, sottoposte a conferma dell’utente.
+
+Non inventare geometrie o dimensioni che non siano ricavabili dal disegno o da informazioni esplicitamente fornite.
+
+C. Elaborazione progettuale
+
+Il software deve applicare regole geometriche, tecniche e progettuali.
+
+Non basta chiedere a un modello AI di disegnare un impianto.
+
+Dobbiamo sviluppare un sistema verificabile che sappia:
+
+* Quali elementi inserire.
+* Dove collocarli.
+* Quali distanze rispettare.
+* Quali parametri utilizzare.
+* Quali vincoli applicare.
+* Quali verifiche effettuare.
+* Quali informazioni richiedere quando mancano dati.
+
+Le regole dovranno essere esplicite, documentate e modificabili senza dover riscrivere l’intero software.
+
+D. Generazione degli elaborati
+
+Il sistema dovrà produrre nuovi file CAD, mantenendo la geometria originale necessaria e aggiungendo gli elementi previsti dall’elaborato richiesto.
+
+Gli output potranno includere:
+
+* Nuove piante.
+* Quote.
+* Simboli.
+* Annotazioni.
+* Layer dedicati.
+* Cartigli.
+* Layout di stampa.
+* Elaborati impiantistici.
+* Tavole PDF.
+
+La generazione dovrà essere ripetibile: a parità di input e parametri, il sistema dovrebbe produrre risultati coerenti.
+
+⸻
+
+5. IL MOTORE CAD: RIUTILIZZARE UNO STRUMENTO ESISTENTE
+
+Non vogliamo sviluppare un motore CAD completo da zero.
+
+Vogliamo individuare un motore open source che si occupi delle operazioni CAD, costruendo intorno a esso la nostra logica progettuale.
+
+5.1 CADCraft
+
+Il primo progetto da analizzare è CADCraft.
+
+Repository da verificare:
+
+https://github.com/cadcraft-desktop/cadcraft
+
+Sito di riferimento:
+
+https://cadcraft.org/
+
+Questi riferimenti costituiscono un punto di partenza, non una garanzia che il progetto sia adatto a tutte le nostre esigenze.
+
+Prima di procedere:
+
+1. Verificare che il repository sia effettivamente quello corretto e ufficiale.
+2. Identificare il progetto upstream e gli eventuali repository collegati.
+3. Leggere la licenza effettiva del codice e delle dipendenze.
+4. Verificare lo stato di manutenzione.
+5. Analizzare l’architettura.
+6. Verificare la compatibilità con macOS e Apple Silicon.
+7. Individuare le funzionalità realmente implementate.
+8. Verificare le capacità di automazione.
+9. Verificare le modalità di integrazione.
+10. Individuare eventuali limitazioni del formato DWG.
+
+Non confondere progetti differenti che utilizzano nomi simili.
+
+Non presumere che il supporto dichiarato per DWG sia completo.
+
+5.2 Funzionalità da verificare
+
+Per il motore CAD, verificare in particolare:
+
+* Lettura DXF.
+* Scrittura DXF.
+* Lettura DWG, se supportata.
+* Scrittura DWG, se supportata.
+* Gestione dei layer.
+* Gestione dei blocchi.
+* Inserimento di testi.
+* Creazione delle quote.
+* Gestione di layout e cartigli.
+* Esportazione PDF.
+* Esportazione di immagini.
+* Controllo tramite CLI.
+* Controllo tramite API.
+* Controllo tramite MCP, se disponibile.
+* Possibilità di automatizzare operazioni tramite JSON o interfacce equivalenti.
+
+Per ogni funzione, indicare se è realmente disponibile, sperimentale, parziale oppure assente.
+
+Non confondere la possibilità di visualizzare un file con la possibilità di modificarlo e riscriverlo senza perdite.
+
+5.3 Alternative
+
+Se CADCraft non soddisfa i requisiti, analizzare altre soluzioni open source.
+
+Valutare, quando pertinenti:
+
+* LibreCAD.
+* FreeCAD.
+* Librerie Python per DXF, come ezdxf.
+* Altre librerie CAD open source con capacità adeguate.
+
+Riferimenti iniziali:
+
+https://librecad.org/
+
+https://www.freecad.org/
+
+https://ezdxf.readthedocs.io/
+
+Questi progetti non sono necessariamente intercambiabili: una libreria DXF, un CAD desktop e un motore geometrico risolvono problemi differenti.
+
+Scegliere la soluzione sulla base di test reali, non soltanto delle descrizioni commerciali o delle caratteristiche dichiarate.
+
+Non integrare tutte le alternative contemporaneamente. Selezionare il numero minimo di componenti necessario.
+
+⸻
+
+6. STRATEGIA DWG E DXF
+
+La compatibilità con AutoCAD è un requisito fondamentale.
+
+Il formato DXF può essere utilizzato come formato di interscambio e di lavoro, purché il flusso venga validato.
+
+Non presumere che tutti gli elementi DWG siano convertibili perfettamente in DXF.
+
+Il flusso da sperimentare è:
+
+1. Ricezione del file DWG.
+2. Conversione in DXF tramite uno strumento gratuito compatibile, se necessaria.
+3. Analisi del DXF.
+4. Creazione di una rappresentazione interna della planimetria.
+5. Generazione delle nuove entità.
+6. Esportazione del nuovo DXF.
+7. Verifica del file generato.
+8. Eventuale conversione finale in DWG.
+9. Apertura del risultato in AutoCAD per il controllo di compatibilità.
+
+La conversione finale in DWG dovrà essere realizzata soltanto attraverso uno strumento gratuito che supporti realmente l’operazione richiesta.
+
+Se non troviamo un convertitore gratuito adeguato, non dichiarare risolto il problema.
+
+Documentare le alternative e le limitazioni.
+
+In particolare, controllare:
+
+* Perdita di blocchi.
+* Perdita di testi.
+* Perdita di quote.
+* Perdita di stili.
+* Modifiche ai layer.
+* Perdita di riferimenti esterni.
+* Alterazioni delle unità di misura.
+* Modifiche alle coordinate.
+* Alterazioni delle proprietà delle entità.
+* Problemi di compatibilità con la versione del formato.
+
+Il test non deve limitarsi ad aprire il file.
+
+Dobbiamo verificare che il disegno sia corretto e che gli elementi siano ancora utilizzabili e modificabili.
+
+⸻
+
+7. IL NOSTRO SOFTWARE DEVE AVERE UN MODELLO INTERNO DELL’EDIFICIO
+
+Non dobbiamo basare tutte le funzionalità sulla manipolazione diretta delle linee CAD.
+
+È necessario progettare un modello interno che rappresenti l’edificio in maniera strutturata.
+
+Questo modello sarà il collegamento tra la geometria originale e tutti gli elaborati futuri.
+
+Esempio concettuale:
+
+EDIFICIO
+
+* Piano.
+    * Locale.
+        * Geometria.
+        * Superficie.
+        * Altezza, se nota.
+        * Pareti.
+        * Porte.
+        * Finestre.
+        * Elementi impiantistici.
+        * Informazioni aggiuntive.
+
+Gli oggetti dovranno poter essere collegati alle rispettive geometrie CAD.
+
+Il modello dovrà distinguere:
+
+* Dati importati.
+* Dati riconosciuti automaticamente.
+* Dati inseriti dall’utente.
+* Dati calcolati.
+* Ipotesi ancora da verificare.
+* Risultati dei controlli.
+
+Le informazioni mancanti non devono essere sostituite silenziosamente da valori inventati.
+
+7.1 Separazione tra geometria e semantica
+
+Una linea CAD non deve essere considerata automaticamente una parete.
+
+Una polilinea chiusa non deve essere considerata automaticamente un locale.
+
+Il sistema deve combinare geometria, proprietà, relazioni spaziali, layer e informazioni dell’utente.
+
+Dobbiamo prevedere un processo di riconoscimento progressivo.
+
+Quando non è possibile identificare con sicurezza un elemento, l’interfaccia deve permettere di correggerlo o classificarlo manualmente.
+
+Le correzioni dell’utente dovranno poter essere salvate nel progetto.
+
+⸻
+
+8. GENERAZIONE AUTOMATICA DEGLI ELABORATI
+
+La generazione degli elaborati deve avvenire tramite moduli distinti.
+
+Non realizzare un unico blocco di codice che contenga tutta la logica progettuale.
+
+Ogni modulo dovrà ricevere un modello dell’edificio, una configurazione e i dati necessari, producendo un elaborato verificabile.
+
+8.1 Primo modulo: piante quotate
+
+È il primo modulo da sviluppare.
+
+Dovrà permettere di:
+
+* Importare la planimetria.
+* Conservare le geometrie originali necessarie.
+* Aggiungere le quote.
+* Aggiungere testi e annotazioni.
+* Organizzare i nuovi elementi su layer dedicati.
+* Creare un cartiglio di base.
+* Impostare un layout di stampa, se supportato.
+* Generare un nuovo file.
+* Esportare una rappresentazione PDF o immagine.
+
+Le quote devono essere generate a partire da geometrie e unità di misura verificate.
+
+Non dedurre automaticamente una misura reale dalla sola dimensione apparente di un’immagine.
+
+Se le unità o la scala sono ambigue, chiedere conferma all’utente.
+
+8.2 Secondo modulo: stato di fatto, progetto, demolizioni e costruzioni
+
+Il sistema dovrà poter confrontare una situazione iniziale e una situazione di progetto.
+
+Dovrà essere possibile rappresentare:
+
+* Elementi esistenti.
+* Elementi da demolire.
+* Elementi da costruire.
+* Elementi modificati.
+
+Il confronto dovrà essere basato su geometrie e classificazioni esplicite, evitando di interpretare automaticamente qualsiasi differenza come una demolizione o una nuova costruzione.
+
+8.3 Terzo modulo: impianto elettrico
+
+Il sistema dovrà arrivare a generare elaborati elettrici partendo dalla geometria dell’edificio e dai requisiti forniti.
+
+Potranno essere previsti:
+
+* Punti luce.
+* Interruttori.
+* Prese.
+* Circuiti.
+* Collegamenti.
+* Quadri.
+* Legende.
+* Annotazioni.
+* Distinte dei componenti.
+
+La posizione degli elementi e la definizione dei circuiti dovranno dipendere da regole e parametri verificabili.
+
+I calcoli e le verifiche tecniche dovranno essere sviluppati con criteri espliciti e documentati.
+
+Non generare dimensionamenti elettrici definitivi senza le informazioni necessarie.
+
+8.4 Quarto modulo: impianto idrico-sanitario
+
+Il sistema dovrà arrivare a rappresentare:
+
+* Apparecchi sanitari.
+* Punti di alimentazione.
+* Reti di distribuzione.
+* Tubazioni.
+* Scarichi.
+* Collettori.
+* Annotazioni.
+* Legende.
+
+La progettazione dovrà tenere conto della posizione degli apparecchi, della geometria disponibile, dei parametri impiantistici e dei vincoli definiti.
+
+Le pendenze, i diametri e i dimensionamenti non dovranno essere inventati.
+
+8.5 Moduli futuri
+
+In fasi successive potranno essere sviluppati:
+
+* Elaborati antincendio, se il contesto e le competenze tecniche lo consentono.
+* Elaborati di ventilazione.
+* Ulteriori impianti.
+* Computi metrici.
+* Quantità dei materiali.
+* Distinte dei componenti.
+* Stime economiche.
+
+Queste funzionalità non devono rallentare la realizzazione del primo prototipo.
+
+⸻
+
+9. NORMATIVE E AFFIDABILITÀ TECNICA
+
+Il software deve essere progettato per generare elaborati tecnicamente coerenti, non semplicemente disegni esteticamente plausibili.
+
+Dobbiamo distinguere:
+
+1. Correttezza geometrica.
+2. Correttezza dei calcoli.
+3. Coerenza progettuale.
+4. Rispetto delle regole normative applicabili.
+5. Completezza della documentazione.
+6. Verifica professionale finale.
+
+Le normative possono dipendere dal Paese, dalla regione, dal comune, dal tipo di intervento e dalla tipologia di impianto.
+
+Non possiamo implementare un generico controllo che dichiari ogni elaborato conforme a tutte le normative.
+
+Le regole dovranno essere organizzate in moduli configurabili.
+
+Per ciascuna regola implementata, registrare:
+
+* Identificativo.
+* Descrizione.
+* Ambito di applicazione.
+* Fonte normativa.
+* Versione o data di riferimento.
+* Condizioni di applicabilità.
+* Dati richiesti.
+* Procedura di verifica.
+* Risultato.
+* Eventuali avvertenze.
+
+Se una regola non è stata implementata o verificata, dichiararlo esplicitamente.
+
+Non presentare gli elaborati come automaticamente approvabili per una CILA, una SCIA o qualsiasi altra pratica edilizia.
+
+Il sistema deve assistere il professionista, consentire controlli ripetibili e segnalare le verifiche ancora necessarie.
+
+⸻
+
+10. INTELLIGENZA ARTIFICIALE: UTILIZZARLA SOLTANTO DOVE SERVE
+
+Non vogliamo un sistema che dipenda necessariamente da un servizio AI a pagamento.
+
+Dobbiamo distinguere due categorie di attività.
+
+10.1 Attività deterministiche
+
+Quando il risultato può essere calcolato con geometria, formule e regole esplicite, utilizzare algoritmi tradizionali.
+
+Esempi:
+
+* Calcolo delle distanze.
+* Calcolo delle superfici.
+* Analisi delle intersezioni.
+* Generazione delle quote.
+* Creazione delle geometrie.
+* Verifica di vincoli.
+* Generazione dei layer.
+* Conteggio dei componenti.
+
+Queste operazioni non devono dipendere da un modello linguistico.
+
+10.2 Attività di interpretazione
+
+L’AI può essere valutata per:
+
+* Interpretazione di disegni disordinati.
+* Classificazione di elementi ambigui.
+* Riconoscimento di simboli.
+* Analisi di annotazioni.
+* Assistenza all’utente.
+* Interpretazione di richieste in linguaggio naturale.
+
+Prima di introdurre un modello, verificarne:
+
+* Licenza.
+* Requisiti hardware.
+* Compatibilità con macOS e Apple Silicon.
+* Spazio necessario.
+* Prestazioni.
+* Qualità dei risultati.
+* Possibilità di utilizzo commerciale, se pertinente.
+
+Preferire l’elaborazione locale quando è sufficientemente efficace.
+
+Non utilizzare API a pagamento.
+
+Non installare modelli di grandi dimensioni senza aver prima verificato che siano realmente necessari.
+
+L’AI non deve modificare silenziosamente dati geometrici certificati o inventare parametri tecnici.
+
+⸻
+
+11. ARCHITETTURA SOFTWARE PROPOSTA
+
+L’architettura deve essere modulare.
+
+La struttura definitiva dovrà essere decisa dopo aver analizzato l’ambiente disponibile, ma dovrà rispettare i seguenti principi.
+
+11.1 Interfaccia web
+
+L’interfaccia consentirà di:
+
+* Accedere al software.
+* Creare progetti.
+* Caricare planimetrie.
+* Visualizzare i file.
+* Configurare gli elaborati.
+* Inserire informazioni mancanti.
+* Consultare gli avvisi.
+* Avviare elaborazioni.
+* Scaricare i risultati.
+
+La tecnologia dovrà essere gratuita e compatibile con l’hosting esistente.
+
+Non introdurre framework pesanti se una soluzione più semplice è sufficiente.
+
+11.2 Backend
+
+Il backend si occuperà di:
+
+* Gestire i progetti.
+* Gestire gli utenti, se previsti.
+* Registrare le elaborazioni.
+* Memorizzare le configurazioni.
+* Coordinare i moduli.
+* Validare gli input.
+* Gestire i file.
+* Conservare lo storico delle operazioni.
+
+Prima di scegliere il linguaggio, verificare le tecnologie disponibili sul server.
+
+Non presumere che il backend debba necessariamente essere sviluppato in PHP o Python: la scelta dovrà dipendere dalle esigenze del sistema e dall’ambiente reale.
+
+11.3 Motore geometrico e CAD
+
+Questo livello sarà responsabile di:
+
+* Lettura e scrittura dei formati supportati.
+* Analisi geometrica.
+* Gestione dei layer.
+* Creazione delle entità.
+* Quotature.
+* Annotazioni.
+* Generazione degli elaborati.
+
+Dovrà essere indipendente dall’interfaccia web.
+
+In questo modo potremo sostituire il motore CAD, se necessario, senza riscrivere tutto il software.
+
+11.4 Modello dell’edificio
+
+Il modello interno rappresenterà l’edificio e conterrà gli oggetti architettonici e impiantistici.
+
+Non deve dipendere esclusivamente dal formato DXF o da uno specifico motore CAD.
+
+11.5 Moduli progettuali
+
+Ogni disciplina dovrà essere sviluppata come modulo indipendente.
+
+Esempi:
+
+* Quotature.
+* Architettura.
+* Demolizioni e costruzioni.
+* Impianto elettrico.
+* Impianto idrico-sanitario.
+
+Ogni modulo dovrà poter essere testato separatamente.
+
+11.6 Database
+
+Utilizzare il database già disponibile, se compatibile con le esigenze del progetto.
+
+Prima di modificarlo:
+
+* Verificare la struttura esistente.
+* Non eliminare tabelle.
+* Non alterare dati di altri progetti.
+* Non sovrascrivere configurazioni esistenti.
+* Predisporre modifiche incrementali e reversibili.
+* Non inserire credenziali nel codice.
+* Non esporre informazioni sensibili nei log.
+
+Se il progetto non dispone ancora di uno schema database, progettare quello necessario senza interferire con eventuali applicazioni già presenti.
+
+11.7 Gestione dei file
+
+Ogni progetto dovrà avere una struttura organizzata.
+
+A titolo esemplificativo:
+
+PROGETTO
+
+* originali
+* importazioni
+* modello
+* elaborazioni
+* esportazioni
+* log
+* configurazioni
+
+La struttura effettiva dovrà essere definita dopo aver esaminato l’ambiente esistente.
+
+Il file originale deve essere conservato e non modificato.
+
+Ogni elaborazione deve produrre nuovi file.
+
+⸻
+
+12. SICUREZZA E INTEGRITÀ DEI DATI
+
+I file CAD possono contenere informazioni importanti e non devono essere danneggiati durante le elaborazioni.
+
+Implementare, dove appropriato:
+
+* Conservazione dell’originale.
+* Copie di lavoro.
+* Nomi file univoci.
+* Controlli sull’estensione e sul contenuto dei file.
+* Limiti di dimensione configurabili.
+* Gestione sicura dei percorsi.
+* Protezione dagli upload malevoli.
+* Validazione degli input.
+* Gestione degli errori.
+* Log delle operazioni.
+* Verifica dell’integrità dei file.
+* Possibilità di ripetere un’elaborazione.
+* Pulizia controllata dei file temporanei.
+
+Non eseguire file o comandi arbitrari derivati dai contenuti caricati.
+
+Non esporre i file di lavoro direttamente al pubblico.
+
+Se l’applicazione sarà accessibile da Internet, verificare autenticazione, autorizzazioni, protezione CSRF e altre misure appropriate al framework scelto.
+
+Non salvare password, token o credenziali nei file di configurazione versionati.
+
+Non apportare modifiche distruttive all’infrastruttura.
+
+⸻
+
+13. FASE ZERO: ANALISI DELL’AMBIENTE
+
+Prima di sviluppare il software, Claude Code deve analizzare il contesto effettivo.
+
+Non iniziare creando una nuova applicazione completa.
+
+Prima raccogliere le informazioni necessarie.
+
+13.1 Ambiente locale
+
+Verificare:
+
+* Sistema operativo.
+* Architettura hardware.
+* Versioni dei runtime installati.
+* Strumenti CAD eventualmente disponibili.
+* Librerie già presenti.
+* Ambiente di sviluppo esistente.
+* Spazio disponibile.
+* Possibilità di eseguire gli strumenti necessari.
+
+Non installare inutilmente dipendenze già disponibili.
+
+13.2 Hosting e sito
+
+Individuare le informazioni disponibili sull’hosting e sul sito di appoggio.
+
+Verificare la compatibilità dell’ambiente, ma non modificare la configurazione del server.
+
+Se le informazioni non sono disponibili localmente, preparare un elenco breve di verifiche da effettuare nel pannello di controllo.
+
+Non chiedere all’utente informazioni già ricavabili dai file o dall’ambiente di lavoro.
+
+Non richiedere password o credenziali in chiaro.
+
+13.3 Database
+
+Verificare le informazioni disponibili sulla struttura del database.
+
+Non apportare modifiche finché non è stata compresa la struttura esistente.
+
+13.4 Analisi dei repository
+
+Esaminare CADCraft e le alternative individuate.
+
+Produrre una relazione che specifichi:
+
+* Nome del progetto.
+* Repository ufficiale.
+* Licenza.
+* Stato di manutenzione.
+* Funzionalità effettive.
+* Compatibilità con macOS.
+* Compatibilità con DXF.
+* Compatibilità con DWG.
+* Capacità di automazione.
+* Dipendenze.
+* Limitazioni.
+* Costi obbligatori eventualmente presenti.
+* Idoneità al nostro progetto.
+
+Le informazioni devono derivare dall’analisi del codice, dalla documentazione ufficiale e da test riproducibili.
+
+Non dichiarare verificata una funzionalità soltanto perché compare nella documentazione.
+
+⸻
+
+14. PRIMO OBIETTIVO CONCRETO: PROTOTIPO CAD
+
+Il primo risultato non deve essere una semplice interfaccia grafica.
+
+Deve essere un prototipo funzionante.
+
+Il prototipo dovrà dimostrare che siamo in grado di prendere un disegno architettonico reale, modificarlo automaticamente e produrre un nuovo elaborato utilizzabile.
+
+14.1 Input
+
+Una planimetria CAD reale.
+
+Preferibilmente un DWG che possa essere convertito in un DXF tramite uno strumento gratuito compatibile.
+
+L’utente dovrà poter scegliere il file di prova.
+
+Non presumere che esista già una planimetria in una determinata cartella.
+
+Se non è disponibile un file di prova, chiedere all’utente di fornirne uno.
+
+14.2 Elaborazione
+
+Il prototipo dovrà:
+
+1. Importare il file.
+2. Leggere le entità supportate.
+3. Recuperare i layer.
+4. Verificare le unità di misura, quando possibile.
+5. Analizzare la geometria.
+6. Conservare gli elementi originali necessari.
+7. Aggiungere un layer dedicato alle nuove quote.
+8. Generare alcune quotature coerenti con la geometria.
+9. Aggiungere annotazioni di prova.
+10. Creare un cartiglio semplice.
+11. Esportare un nuovo file.
+12. Riaprire il file generato.
+13. Verificare la presenza degli elementi previsti.
+14. Produrre una rappresentazione visiva del risultato.
+
+Le quote dovranno essere posizionate evitando, per quanto possibile, sovrapposizioni con geometrie e testi.
+
+Non è necessario risolvere tutte le casistiche architettoniche in questa prima fase.
+
+È invece necessario dimostrare che il flusso di elaborazione è tecnicamente valido.
+
+14.3 Output
+
+Produrre:
+
+* File CAD originale, conservato senza modifiche.
+* File di lavoro.
+* File CAD elaborato.
+* Anteprima visiva.
+* Eventuale PDF.
+* Log dell’elaborazione.
+* Rapporto dei controlli eseguiti.
+* Elenco delle limitazioni riscontrate.
+
+14.4 Verifica in AutoCAD
+
+Il risultato deve essere verificato anche in un CAD compatibile con il formato prodotto.
+
+Se AutoCAD è disponibile, utilizzarlo per il controllo finale.
+
+In caso contrario, utilizzare uno strumento gratuito compatibile e documentare ciò che non è stato possibile verificare.
+
+La semplice generazione di un file non è sufficiente per considerare il test superato.
+
+⸻
+
+15. CRITERI DI ACCETTAZIONE DEL PROTOTIPO
+
+Il prototipo sarà considerato riuscito soltanto se supera i seguenti controlli.
+
+Test 1: lettura
+
+Il sistema legge correttamente le entità supportate dal file di prova.
+
+Test 2: conservazione
+
+Le geometrie originali necessarie rimangono presenti nel risultato.
+
+Test 3: layer
+
+Il file elaborato contiene i layer previsti.
+
+Test 4: quotature
+
+Le nuove quote corrispondono alle misure geometriche verificate.
+
+Test 5: cartiglio
+
+Il cartiglio viene inserito nella posizione prevista.
+
+Test 6: esportazione
+
+Il file viene salvato correttamente.
+
+Test 7: riapertura
+
+Il file generato può essere riaperto dal motore CAD scelto.
+
+Test 8: compatibilità
+
+Il risultato viene verificato in AutoCAD, quando disponibile, oppure in un CAD compatibile.
+
+Test 9: integrità
+
+Non si rilevano perdite o alterazioni inaccettabili delle informazioni necessarie al progetto.
+
+Test 10: ripetibilità
+
+Il processo può essere eseguito nuovamente senza danneggiare il file originale.
+
+Test 11: costo
+
+Il processo funziona senza servizi a pagamento o abbonamenti obbligatori.
+
+Se un test fallisce, documentare il problema e risolverlo prima di proseguire.
+
+⸻
+
+16. ROADMAP DI SVILUPPO
+
+La roadmap deve essere rispettata per evitare di costruire molte funzionalità su una base non ancora verificata.
+
+FASE 0 — Ricognizione
+
+* Analizzare l’ambiente.
+* Verificare l’hosting.
+* Verificare il database.
+* Analizzare CADCraft.
+* Analizzare le alternative.
+* Verificare le licenze.
+* Individuare il flusso DXF/DWG più affidabile.
+
+Risultato: relazione tecnica e scelta motivata degli strumenti.
+
+FASE 1 — Prototipo CAD
+
+* Importare un disegno.
+* Leggere geometrie e layer.
+* Aggiungere quote.
+* Inserire annotazioni.
+* Creare un cartiglio.
+* Esportare un nuovo file.
+* Riaprirlo e verificarlo.
+
+Risultato: un primo elaborato CAD generato automaticamente.
+
+FASE 2 — Motore di elaborazione
+
+* Organizzare il codice.
+* Separare la geometria dalla logica applicativa.
+* Implementare la gestione dei file.
+* Definire i moduli.
+* Implementare i controlli.
+* Predisporre test automatici.
+
+Risultato: una base riutilizzabile per più elaborati.
+
+FASE 3 — Modello dell’edificio
+
+* Interpretare la geometria.
+* Riconoscere i locali.
+* Identificare pareti, porte e finestre.
+* Calcolare superfici.
+* Gestire le informazioni mancanti.
+* Permettere correzioni manuali.
+
+Risultato: un modello interno strutturato dell’immobile.
+
+FASE 4 — Elaborati architettonici
+
+* Piante quotate.
+* Stato di fatto.
+* Stato di progetto.
+* Demolizioni.
+* Nuove costruzioni.
+* Layer e cartigli configurabili.
+
+Risultato: generazione automatizzata di elaborati architettonici.
+
+FASE 5 — Impianti
+
+Sviluppare progressivamente:
+
+1. Impianto elettrico.
+2. Impianto idrico-sanitario.
+3. Scarichi e fognature.
+4. Altri impianti, se necessari.
+
+Risultato: generatori di elaborati impiantistici basati su regole esplicite.
+
+FASE 6 — Integrazione web
+
+* Collegare il motore al sito.
+* Gestire i progetti.
+* Gestire gli upload.
+* Registrare le elaborazioni.
+* Memorizzare le configurazioni.
+* Consentire il download dei risultati.
+
+Questa fase può essere anticipata in forma minima se serve a testare il flusso completo, ma non deve obbligare a costruire subito tutta l’interfaccia.
+
+Risultato: applicazione web utilizzabile.
+
+FASE 7 — Evoluzione
+
+* Computi metrici.
+* Quantità dei materiali.
+* Distinte dei componenti.
+* Verifiche aggiuntive.
+* AI locale, dove utile.
+* Miglioramento dell’automazione.
+* Supporto a ulteriori formati.
+
+Risultato: ampliamento progressivo delle funzionalità.
+
+⸻
+
+17. REGOLE OPERATIVE PER CLAUDE CODE
+
+Queste regole sono obbligatorie durante lo sviluppo.
+
+17.1 Analizzare prima di modificare
+
+Prima di intervenire su un progetto esistente:
+
+* Esaminare la struttura.
+* Individuare i file coinvolti.
+* Comprendere il codice.
+* Verificare le dipendenze.
+* Individuare i punti di integrazione.
+
+Non creare una nuova applicazione indipendente se esiste già una struttura che può essere riutilizzata.
+
+17.2 Non danneggiare i progetti esistenti
+
+Non modificare file estranei al progetto.
+
+Non sovrascrivere configurazioni esistenti.
+
+Non alterare database senza aver compreso gli effetti.
+
+Non eliminare dati.
+
+Non modificare automaticamente file originali.
+
+Prima di modifiche significative, predisporre un sistema di backup o una copia di lavoro.
+
+17.3 Non sviluppare tutto contemporaneamente
+
+Procedere per obiettivi piccoli, misurabili e verificabili.
+
+Completare il prototipo CAD prima di iniziare lo sviluppo esteso degli impianti.
+
+Non creare prematuramente una complessa architettura che non sia giustificata dalle necessità reali.
+
+17.4 Non aggiungere dipendenze inutili
+
+Prima di installare una libreria, verificare:
+
+* Se è già disponibile.
+* Se è realmente necessaria.
+* Se è compatibile con il sistema.
+* Se è open source.
+* Se richiede servizi esterni.
+* Se introduce costi.
+* Se esistono alternative più semplici.
+
+17.5 Non dichiarare completato ciò che non è stato testato
+
+Distinguere sempre tra:
+
+* Funzionalità analizzata.
+* Funzionalità implementata.
+* Funzionalità testata.
+* Funzionalità verificata su file reali.
+* Funzionalità ancora sperimentale.
+
+Non dichiarare che il software genera DWG corretti senza aver verificato il risultato.
+
+Non dichiarare che un elaborato è conforme alle normative senza aver eseguito le verifiche previste.
+
+17.6 Mantenere documentazione aggiornata
+
+Ogni fase deve produrre documentazione sufficiente per riprendere il lavoro in seguito.
+
+Registrare:
+
+* Decisioni architetturali.
+* Dipendenze.
+* Licenze.
+* Comandi di installazione.
+* Comandi di esecuzione.
+* Test.
+* Problemi.
+* Limitazioni.
+* Prossimi passi.
+
+Predisporre un file di avanzamento del progetto, aggiornandolo al termine di ogni fase.
+
+17.7 Richiedere conferma per operazioni rischiose
+
+Non eseguire senza autorizzazione operazioni che possano:
+
+* Eliminare dati.
+* Sovrascrivere file importanti.
+* Modificare configurazioni di produzione.
+* Cambiare il database esistente.
+* Esporre il sito a rischi di sicurezza.
+* Introdurre costi.
+
+⸻
+
+18. DOCUMENTAZIONE DA PRODURRE
+
+Durante la prima fase, creare una documentazione sintetica ma completa.
+
+I nomi dei file possono essere adattati alla struttura esistente, evitando duplicazioni inutili.
+
+Documenti previsti:
+
+ANALISI_TECNICA.md
+
+Contiene:
+
+* Analisi dell’ambiente.
+* Strumenti CAD esaminati.
+* Librerie individuate.
+* Licenze.
+* Compatibilità.
+* Limitazioni.
+* Motivazioni delle scelte.
+
+ARCHITETTURA.md
+
+Contiene:
+
+* Architettura del software.
+* Componenti.
+* Relazioni tra moduli.
+* Flusso dei file.
+* Gestione dei dati.
+* Strategie di integrazione.
+
+ROADMAP.md
+
+Contiene:
+
+* Fasi di sviluppo.
+* Obiettivi.
+* Stato di avanzamento.
+* Problemi aperti.
+* Prossime attività.
+
+TEST.md
+
+Contiene:
+
+* Test eseguiti.
+* File utilizzati.
+* Risultati.
+* Problemi.
+* Controlli ancora necessari.
+
+LICENZE.md
+
+Contiene:
+
+* Dipendenze utilizzate.
+* Licenze.
+* Eventuali obblighi.
+* Limitazioni d’uso.
+* Verifica della compatibilità con una futura distribuzione commerciale.
+
+README.md
+
+Contiene:
+
+* Descrizione del progetto.
+* Requisiti.
+* Installazione.
+* Configurazione.
+* Avvio.
+* Esecuzione dei test.
+
+Non è necessario creare tutti questi file prima di aver esaminato l’ambiente. Riutilizzare la documentazione esistente quando appropriato.
+
+⸻
+
+19. COSA NON DOBBIAMO FARE
+
+Per evitare sprechi di tempo, sono vietati i seguenti approcci.
+
+Non sviluppare un CAD da zero.
+
+Dobbiamo riutilizzare un motore esistente, quando possibile.
+
+Non basare tutto sull’intelligenza artificiale generativa.
+
+La geometria, i calcoli e i controlli devono essere gestiti da algoritmi verificabili.
+
+Non promettere una conversione DWG perfetta senza test.
+
+La compatibilità deve essere dimostrata su file reali.
+
+Non iniziare subito con tutti gli impianti.
+
+Prima dobbiamo dimostrare che il flusso CAD funziona.
+
+Non introdurre API a pagamento.
+
+Il sistema deve poter funzionare senza costi obbligatori di utilizzo.
+
+Non installare software commerciale con l’idea di utilizzarlo gratuitamente.
+
+Le dipendenze devono essere legalmente utilizzabili secondo le rispettive licenze.
+
+Non sviluppare una piattaforma web complessa prima di aver validato il motore.
+
+La priorità iniziale è la generazione corretta dei file CAD.
+
+Non inventare dati progettuali.
+
+Le informazioni mancanti devono essere richieste o segnalate.
+
+Non modificare l’hosting o il database senza aver verificato l’impatto.
+
+L’infrastruttura esistente deve essere preservata.
+
+Non considerare un disegno visivamente convincente come prova di correttezza tecnica.
+
+La correttezza deve essere verificata attraverso geometrie, parametri e test.
+
+⸻
+
+20. PRIMA ATTIVITÀ DA ESEGUIRE
+
+Claude Code deve iniziare esclusivamente con la FASE 0 e la preparazione del prototipo.
+
+Non deve tentare immediatamente di realizzare l’intero software.
+
+L’ordine di lavoro iniziale è il seguente.
+
+Passaggio 1 — Ricognizione
+
+Analizzare l’ambiente locale e le informazioni disponibili sull’infrastruttura esistente.
+
+Passaggio 2 — Verifica CADCraft
+
+Analizzare il repository corretto, il codice, le licenze, le capacità effettive e le limitazioni.
+
+Passaggio 3 — Alternative
+
+Individuare le migliori combinazioni gratuite e open source per lavorare con DXF e, se possibile, DWG.
+
+Passaggio 4 — Scelta tecnica
+
+Selezionare gli strumenti necessari per il primo prototipo, motivando la decisione.
+
+Passaggio 5 — Piano di test
+
+Definire come verificare il risultato su una planimetria reale.
+
+Passaggio 6 — Implementazione del prototipo
+
+Dopo aver compreso l’ambiente e scelto gli strumenti, sviluppare il primo prototipo isolato.
+
+Passaggio 7 — Verifica
+
+Eseguire i test, documentare i risultati e correggere i problemi prima di procedere.
+
+⸻
+
+21. RISULTATO ATTESO DALLA PRIMA SESSIONE DI LAVORO
+
+Al termine della prima sessione, vogliamo ottenere:
+
+1. Una relazione sull’ambiente disponibile.
+2. Una verifica delle funzionalità e delle licenze di CADCraft.
+3. Un confronto con le alternative open source.
+4. Una proposta concreta per la gestione DXF/DWG.
+5. Una decisione motivata sul motore CAD.
+6. Una struttura di progetto coerente con l’ambiente esistente.
+7. Un piano di test.
+8. Un elenco delle informazioni che mancano realmente.
+9. Una stima qualitativa delle difficoltà tecniche, senza introdurre costi.
+10. Il primo prototipo, se le verifiche preliminari consentono di procedere in sicurezza.
+
+Se per sviluppare il prototipo è necessario un file DWG reale e non è disponibile, fermarsi dopo la preparazione dell’ambiente e chiedere all’utente di fornire una planimetria.
+
+Non sostituire il test reale con un esempio artificiale senza dichiararlo.
+
+⸻
+
+22. PRINCIPIO GUIDA FINALE
+
+Il nostro obiettivo non è creare un semplice visualizzatore CAD, né un generatore di disegni casuali.
+
+Vogliamo costruire progressivamente un software che comprenda la geometria di un edificio, organizzi le informazioni architettoniche, applichi regole progettuali e produca elaborati tecnici verificabili.
+
+Dobbiamo raggiungere questo risultato sfruttando il più possibile ciò che esiste già, evitando di riscrivere strumenti disponibili e mantenendo il controllo del codice e dell’architettura.
+
+Il sistema dovrà essere modulare, espandibile, documentato e utilizzabile senza abbonamenti obbligatori.
+
+L’infrastruttura web e il database sono già disponibili: dobbiamo riutilizzarli, verificandone le capacità effettive.
+
+La scelta degli strumenti deve basarsi su prove reali, compatibilità, licenze e sostenibilità tecnica.
+
+La prima priorità è dimostrare che siamo in grado di trasformare una planimetria reale in un nuovo elaborato CAD valido.
+
+Non iniziare sviluppando tutto. Non spendere denaro. Non modificare ciò che non hai ancora compreso. Analizza, verifica, costruisci il prototipo e procedi soltanto dopo averne dimostrato il funzionamento.

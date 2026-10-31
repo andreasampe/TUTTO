@@ -1,6 +1,6 @@
 # DOMUS — cose da fare
 
-Promemoria che viaggia con la cartella `domus` (aggiornato al 31/10/2026).
+Promemoria aggiornato al 31/10/2026, insieme agli altri appunti in questa cartella.
 Il piano completo e tecnico è in `cad/ROADMAP.md` nel repository GitHub `andreasampe/TUTTO`, ramo `claude/ciao-kds7b5`.
 
 ## Come continuare il lavoro

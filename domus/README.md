@@ -14,7 +14,7 @@ Lo stile (colori, caratteri, componenti, immagini) è descritto in [STILE.md](ST
 | ![Galleria](docs/schermate/10-galleria.jpg) | ![Studio](docs/schermate/12-studio.jpg) |
 | ![Bacheca](docs/schermate/04-bacheca.jpg) | ![Accesso](docs/schermate/01-accesso.jpg) |
 
-Le cose ancora da fare, con le decisioni prese, sono in [DA_FARE.md](DA_FARE.md).
+Le cose ancora da fare, con le decisioni prese, e gli appunti iniziali sono nella cartella [`appunti`](../appunti/README.md) del repository (da tenere fuori dalla parte pubblica del sito).
 
 ## Requisiti
 
